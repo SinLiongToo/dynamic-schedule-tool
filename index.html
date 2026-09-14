@@ -1,0 +1,1835 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>動態排程工具 / Dynamic Scheduler</title>
+<style>
+  :root{
+    --navy:#0F1B2D;
+    --slate:#1E3A5F;
+    --amber:#F5A623;
+    --cream:#F8F4ED;
+    --sage:#7FB5A0;
+    --red:#D96A5A;
+    --bg:var(--cream);
+    --panel:#ffffff;
+    --text:var(--navy);
+    --text-dim:#5A6B80;
+    --border:#DCD5C7;
+    --grid-line:#E7E1D4;
+    --shadow: 0 1px 2px rgba(15,27,45,.06);
+  }
+  [data-theme="dark"]{
+    --bg:#0B1220;
+    --panel:#111C2E;
+    --text:#EDEBE3;
+    --text-dim:#93A2B8;
+    --border:#233247;
+    --grid-line:#1B2739;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC",sans-serif;
+    line-height:1.45;
+  }
+  .app{max-width:1400px;margin:0 auto;padding:16px 16px 60px;}
+
+  /* header */
+  header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+  header h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.2px;}
+  header h1 small{display:block;font-weight:400;font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .hdr-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+  button{
+    font-family:inherit;font-size:13px;border:1px solid var(--border);
+    background:var(--panel);color:var(--text);padding:7px 12px;border-radius:7px;
+    cursor:pointer;transition:background .15s,border-color .15s;
+  }
+  button:hover{border-color:var(--amber);}
+  button.primary{background:var(--amber);border-color:var(--amber);color:var(--navy);font-weight:600;}
+  button.primary:hover{filter:brightness(1.05);}
+  button.ghost{background:transparent;}
+  button.danger{color:var(--red);}
+  button.icon{padding:6px 8px;}
+  select,input[type=text],input[type=number],input[type=date]{
+    font-family:inherit;font-size:13px;background:var(--panel);color:var(--text);
+    border:1px solid var(--border);border-radius:7px;padding:6px 9px;
+  }
+  label{font-size:12px;color:var(--text-dim);display:block;margin-bottom:3px;}
+
+  /* tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border);}
+  .tab{padding:9px 14px;font-size:13px;cursor:pointer;color:var(--text-dim);border-bottom:2px solid transparent;user-select:none;}
+  .tab.active{color:var(--text);border-color:var(--amber);font-weight:600;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* panels / cards */
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:var(--shadow);}
+  .panel + .panel{margin-top:14px;}
+  .panel h2{font-size:14px;margin:0 0 10px;font-weight:700;}
+  .row{display:flex;gap:16px;flex-wrap:wrap;}
+  .row > div{flex:1;min-width:160px;}
+
+  /* legend */
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-dim);margin-bottom:10px;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
+
+  /* gantt */
+  .gantt-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--panel);}
+  .gantt{display:grid;min-width:max-content;position:relative;}
+  .gantt-row{display:grid;grid-template-columns:150px repeat(var(--slots),var(--shiftw,34px));}
+  .gantt-row.header-row{position:sticky;top:0;z-index:3;background:var(--panel);}
+  .corner{position:sticky;left:0;z-index:4;background:var(--panel);border-right:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 10px;font-size:11px;color:var(--text-dim);font-weight:600;}
+  .daycell-hdr{border-bottom:1px solid var(--border);border-right:1px solid var(--grid-line);text-align:center;padding:6px 0 4px;font-size:10px;color:var(--text-dim);}
+  .daycell-hdr.day-start{border-left:2px solid var(--border);}
+  .daycell-hdr.day-alt{background:rgba(0,0,0,.02);}
+  [data-theme="dark"] .daycell-hdr.day-alt{background:rgba(255,255,255,.03);}
+  .daycell-hdr .dow{display:block;font-size:9px;opacity:.7;}
+  .daycell-hdr.weekend{background:var(--grid-line);}
+  .res-label{position:sticky;left:0;z-index:2;background:var(--panel);border-right:1px solid var(--border);border-bottom:1px solid var(--grid-line);padding:8px 10px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:4px;}
+  .res-label small{display:block;font-weight:400;color:var(--text-dim);font-size:10px;}
+  .daycell{border-bottom:1px solid var(--grid-line);border-right:1px solid var(--grid-line);position:relative;height:50px;}
+  .daycell.weekend{background:rgba(0,0,0,.02);}
+  .daycell.day-start{border-left:2px solid var(--border);}
+  .daycell.day-alt{background:rgba(0,0,0,.018);}
+  [data-theme="dark"] .daycell.day-alt{background:rgba(255,255,255,.025);}
+  .daycell.over{outline:2px solid var(--red);outline-offset:-2px;}
+  .taskbar{
+    position:absolute;top:5px;bottom:5px;left:2px;right:2px;border-radius:6px;
+    font-size:12px;color:#fff;display:flex;align-items:center;padding:0 7px;
+    cursor:grab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    border:1px solid rgba(0,0,0,.15);touch-action:none;user-select:none;
+    z-index:2;
+  }
+  .taskbar.dragging{opacity:.55;box-shadow:0 4px 10px rgba(0,0,0,.3);}
+  .today-line{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:3;pointer-events:none;}
+  .today-line .tag{position:absolute;top:-1px;left:4px;font-size:9px;background:var(--red);color:#fff;padding:1px 4px;border-radius:3px;white-space:nowrap;}
+  .taskbar.pending{background:var(--slate);}
+  .taskbar.inprogress{background:var(--amber);color:var(--navy);font-weight:600;}
+  .taskbar.done{background:var(--sage);color:var(--navy);}
+  .taskbar.risk{outline:2px solid var(--red);outline-offset:1px;}
+  .taskbar.locked::after{content:"📌";position:absolute;right:4px;font-size:9px;}
+  .taskbar.critical{box-shadow: inset 0 0 0 2px rgba(255,255,255,.85);}
+  [data-theme="dark"] .taskbar.critical{box-shadow: inset 0 0 0 2px rgba(0,0,0,.85);}
+  .taskbar:active{cursor:grabbing;}
+  .setupbar{
+    position:absolute;top:5px;bottom:5px;
+    background:repeating-linear-gradient(45deg, var(--border), var(--border) 4px, transparent 4px, transparent 8px);
+    border-radius:4px;opacity:.8;pointer-events:none;z-index:1;
+  }
+  .legend .checkrow{font-size:12px;color:var(--text-dim);margin:0;}
+  .diff-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--grid-line);font-size:13px;}
+  .diff-row .arrow{color:var(--text-dim);}
+
+  /* kanban */
+  .kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .kcol{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px;min-height:200px;}
+  .kcol h3{font-size:12px;margin:0 0 8px;color:var(--text-dim);font-weight:700;}
+  .kcard{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px;cursor:pointer;}
+  .kcard b{display:block;font-size:13px;margin-bottom:3px;}
+  .kcard .meta{color:var(--text-dim);font-size:11px;}
+
+  /* load view */
+  .load-row{display:grid;grid-template-columns:140px 1fr 60px;align-items:center;gap:10px;margin-bottom:10px;font-size:12px;}
+  .load-bar-bg{background:var(--grid-line);border-radius:6px;height:14px;overflow:hidden;}
+  .load-bar-fill{height:100%;background:var(--sage);}
+  .load-bar-fill.high{background:var(--amber);}
+  .load-bar-fill.over{background:var(--red);}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(15,27,45,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;}
+  .overlay.show{display:flex;}
+  .modal{background:var(--panel);border-radius:12px;padding:18px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;}
+  .modal.wide-modal{max-width:96vw;width:96vw;height:92vh;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;}
+  .modal.wide-modal #ganttZoomHost{flex:1;min-height:0;}
+  .modal.wide-modal #ganttZoomHost #ganttPane{display:flex;flex-direction:column;height:100%;}
+  .modal.wide-modal #ganttZoomHost #ganttPane .legend,
+  .modal.wide-modal #ganttZoomHost #ganttPane .small-note{flex:0 0 auto;}
+  .modal.wide-modal #ganttZoomHost #ganttPane .gantt-scroll{flex:1;min-height:0;overflow-y:auto;}
+  .modal h3{margin-top:0;font-size:15px;}
+  .field{margin-bottom:10px;}
+  .field input,.field select{width:100%;}
+  .modal-actions{display:flex;justify-content:space-between;margin-top:16px;gap:8px;}
+  .checkrow{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);}
+  .checkrow label{margin:0;color:var(--text);}
+
+  .small-note{font-size:11px;color:var(--text-dim);margin-top:8px;}
+
+  /* header grouping */
+  .hdr-divider{width:1px;height:20px;background:var(--border);margin:0 2px;}
+
+  /* badges */
+  .badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;line-height:1.6;white-space:nowrap;}
+  .badge.pending{background:rgba(30,58,95,.10);color:var(--slate);}
+  [data-theme="dark"] .badge.pending{background:rgba(120,160,220,.18);color:#a9c2e8;}
+  .badge.inprogress{background:rgba(245,166,35,.16);color:#9a6300;}
+  [data-theme="dark"] .badge.inprogress{background:rgba(245,166,35,.22);color:var(--amber);}
+  .badge.done{background:rgba(127,181,160,.20);color:#356452;}
+  [data-theme="dark"] .badge.done{background:rgba(127,181,160,.24);color:var(--sage);}
+  .badge.risk{background:rgba(217,106,90,.16);color:#a8402f;}
+  [data-theme="dark"] .badge.risk{background:rgba(217,106,90,.24);color:#ff9686;}
+  .badge.priority{background:var(--grid-line);color:var(--text-dim);}
+  .badge.priority.p-high{background:rgba(217,106,90,.16);color:#a8402f;}
+  [data-theme="dark"] .badge.priority.p-high{background:rgba(217,106,90,.24);color:#ff9686;}
+
+  /* overview dashboard */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-bottom:14px;}
+  .stat-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow);}
+  .stat-card .num{font-size:26px;font-weight:700;line-height:1.15;}
+  .stat-card .lbl{font-size:11px;color:var(--text-dim);margin-top:3px;}
+  .stat-card.warn .num{color:var(--red);}
+  .ov-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid var(--grid-line);font-size:13px;cursor:pointer;}
+  .ov-row:last-child{border-bottom:none;}
+  .ov-row:hover{background:var(--bg);}
+  .ov-row .ov-meta{color:var(--text-dim);font-size:11px;font-weight:400;}
+
+  /* inline-editable tables (tasks / resources) */
+  .edit-table-wrap{overflow-x:auto;}
+  .edit-table{font-size:12px;min-width:max-content;}
+  .edit-table .et-row{display:grid;align-items:center;gap:6px;padding:4px 2px;border-bottom:1px solid var(--grid-line);}
+  .edit-table .et-row.et-head{font-size:11px;color:var(--text-dim);font-weight:700;border-bottom:1px solid var(--border);padding-bottom:6px;}
+  .edit-table .et-row:not(.et-head):hover{background:var(--bg);}
+  .edit-table input,.edit-table select{font-size:12px;padding:5px 6px;width:100%;min-width:0;}
+  .edit-table .et-actions{display:flex;gap:2px;justify-content:flex-end;}
+  .task-table .et-row{grid-template-columns:minmax(150px,2.2fr) 64px 58px minmax(120px,1.3fr) 132px 104px 68px 32px 96px;}
+  .res-table .et-row{grid-template-columns:minmax(150px,2fr) 90px 130px 96px;}
+
+  @media (max-width:640px){
+    .kanban{grid-template-columns:1fr;}
+    header h1{font-size:16px;}
+  }
+</style>
+</head>
+<body data-theme="dark">
+<div class="app">
+
+  <header>
+    <h1 id="appTitle">動態排程工具<small id="appSubtitle">任務・時程・資源・自動排程＋人工介入</small></h1>
+    <div class="hdr-controls">
+      <button class="icon" id="helpBtn" title="Help">❓</button>
+      <button class="icon" id="langBtn" title="Language">中/EN</button>
+      <button class="icon" id="themeBtn" title="Theme">🌙</button>
+      <span class="hdr-divider"></span>
+      <select id="exportFormatSel">
+        <option value="json" data-i="formatJsonOpt">JSON（完整備份）</option>
+        <option value="csv" data-i="formatCsvOpt">CSV（任務清單）</option>
+      </select>
+      <button id="exportBtn">匯出</button>
+      <button id="importBtn">匯入</button>
+      <input type="file" id="importFile" accept=".json,.csv,application/json,text/csv" style="display:none">
+      <span class="hdr-divider"></span>
+      <button id="resetBtn" class="ghost">範例資料</button>
+      <button id="resetTestersBtn" class="ghost">測試機台範例</button>
+      <span class="hdr-divider"></span>
+      <button class="primary" id="autoScheduleBtn">▶ 自動排程</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-view="overview">總覽</div>
+    <div class="tab" data-view="gantt">甘特圖</div>
+    <div class="tab" data-view="kanban">看板</div>
+    <div class="tab" data-view="load">資源負載</div>
+    <div class="tab" data-view="data">任務／資源設定</div>
+  </div>
+
+  <!-- OVERVIEW VIEW -->
+  <div class="view active" id="view-overview">
+    <div class="stat-grid" id="statGrid"></div>
+    <div class="row" style="align-items:stretch;">
+      <div class="panel" style="flex:1;min-width:280px;">
+        <h2 data-i="atRiskTitle">逾期風險任務</h2>
+        <div id="riskListRoot"></div>
+      </div>
+      <div class="panel" style="flex:1;min-width:280px;">
+        <h2 data-i="hotspotTitle">資源熱點（負載最高）</h2>
+        <div id="hotspotListRoot"></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:14px;">
+      <h2 data-i="upNextTitle">即將開始</h2>
+      <div id="upNextRoot"></div>
+    </div>
+  </div>
+
+  <!-- GANTT VIEW -->
+  <div class="view" id="view-gantt">
+   <div id="ganttPane">
+    <div class="legend">
+      <span><span class="dot" style="background:var(--slate)"></span> <span data-i="pending">待排程</span></span>
+      <span><span class="dot" style="background:var(--amber)"></span> <span data-i="inprogress">進行中</span></span>
+      <span><span class="dot" style="background:var(--sage)"></span> <span data-i="done">已完成</span></span>
+      <span><span class="dot" style="background:var(--red)"></span> <span data-i="risk">逾期風險</span></span>
+      <span>📌 <span data-i="lockedHint">人工鎖定（拖曳後自動鎖定）</span></span>
+      <span><span class="dot" style="background:repeating-linear-gradient(45deg, var(--text-dim), var(--text-dim) 2px, transparent 2px, transparent 4px)"></span> <span data-i="setupHint">換線／緩衝時間</span></span>
+      <span class="checkrow"><input type="checkbox" id="showCritical" checked><label for="showCritical" data-i="criticalToggle">顯示關鍵路徑</label></span>
+      <span class="checkrow"><input type="checkbox" id="showDeps"><label for="showDeps" data-i="depArrowsToggle">顯示相依關係箭頭</label></span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+        <button class="icon ghost" id="zoomOutBtn">－</button>
+        <span id="zoomLabel" style="font-size:12px;color:var(--text-dim);min-width:34px;text-align:center;">100%</span>
+        <button class="icon ghost" id="zoomInBtn">＋</button>
+        <button class="ghost icon" id="jumpTodayBtn" data-i="jumpToday">📍 今天</button>
+        <button class="ghost icon" id="expandGanttBtn" data-i="expandGanttBtn">⛶ 放大</button>
+      </span>
+    </div>
+    <div class="gantt-scroll"><div class="gantt" id="ganttRoot"></div></div>
+    <div class="small-note" data-i="dragHint">提示：拖曳任務條可改變開始日與資源，拖放後會自動鎖定，不會被下一次自動排程移動。點擊任務條可編輯細節。</div>
+   </div>
+  </div>
+
+  <!-- KANBAN VIEW -->
+  <div class="view" id="view-kanban">
+    <div class="kanban" id="kanbanRoot"></div>
+  </div>
+
+  <!-- LOAD VIEW -->
+  <div class="view" id="view-load">
+    <div class="panel">
+      <h2 id="loadTitleEl">資源負載率（未來 <span id="horizonSpan"></span> 天）</h2>
+      <div id="loadRoot"></div>
+    </div>
+  </div>
+
+  <!-- DATA / SETTINGS VIEW -->
+  <div class="view" id="view-data">
+    <div class="panel">
+      <div class="row" style="align-items:flex-end;">
+        <div><h2 style="margin:0" data-i="tasksTitle">任務清單</h2></div>
+        <div style="flex:0 0 auto;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="ghost" id="csvTemplateBtn" data-i="csvTemplateBtn">下載 CSV 範本</button>
+          <button class="primary" id="addTaskBtn" data-i="addTask">+ 新增任務</button>
+        </div>
+      </div>
+      <div class="small-note" data-i="csvNote">CSV 欄位：name,duration,priority,resource,deps,deadline,status,progress。duration 為小時，resource 填資源名稱（留空＝自動；填入不存在的資源名稱會自動新增該資源），deps 是前置任務名稱、多個用「|」分隔。用右上角「匯入」／「匯出」即可存取 CSV（先在旁邊選單選「CSV」）：匯入時任務名稱與現有任務相同會更新該任務，不同則新增為新任務，不會產生重複。</div>
+      <div class="row" style="margin-top:10px;">
+        <div style="flex:2;min-width:180px;">
+          <label data-i="searchLbl">搜尋任務</label>
+          <input type="text" id="taskSearchInput" style="width:100%;">
+        </div>
+        <div>
+          <label data-i="filterStatusLbl">狀態篩選</label>
+          <select id="taskStatusFilter">
+            <option value="all" data-i="filterAll">全部</option>
+            <option value="pending" data-i="pending">待排程</option>
+            <option value="inprogress" data-i="inprogress">進行中</option>
+            <option value="done" data-i="done">已完成</option>
+          </select>
+        </div>
+        <div>
+          <label data-i="filterResourceLbl">資源篩選</label>
+          <select id="taskResourceFilter"></select>
+        </div>
+        <div>
+          <label data-i="sortLbl">排序方式</label>
+          <select id="taskSortSelect">
+            <option value="priority" data-i="sortPriority">優先權（高→低）</option>
+            <option value="deadline" data-i="sortDeadline">截止日（早→晚）</option>
+            <option value="start" data-i="sortStart">開始時間</option>
+            <option value="name" data-i="sortName">名稱</option>
+          </select>
+        </div>
+      </div>
+      <div id="taskListRoot" style="margin-top:10px;"></div>
+    </div>
+    <div class="panel">
+      <div class="row" style="align-items:flex-end;">
+        <div><h2 style="margin:0" data-i="resourcesTitle">資源清單</h2></div>
+        <div style="flex:0 0 auto"><button class="primary" id="addResBtn" data-i="addRes">+ 新增資源</button></div>
+      </div>
+      <div id="resListRoot" style="margin-top:10px;"></div>
+    </div>
+    <div class="panel">
+      <h2 data-i="settingsTitle">排程設定</h2>
+      <div class="row">
+        <div>
+          <label data-i="horizonLbl">排程視窗（天）</label>
+          <input type="number" id="horizonInput" min="7" max="90" value="24">
+        </div>
+        <div>
+          <label data-i="skipWeekendLbl">週末不排程</label>
+          <input type="checkbox" id="skipWeekend" checked>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- GANTT EXPANDED MODAL -->
+<div class="overlay" id="ganttZoomModal">
+  <div class="modal wide-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex:0 0 auto;">
+      <h3 style="margin:0;" data-i="ganttZoomTitle">甘特圖（放大檢視）</h3>
+      <button class="primary" id="closeGanttZoomBtn" data-i="diffClose">關閉</button>
+    </div>
+    <div id="ganttZoomHost"></div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="overlay" id="helpModal">
+  <div class="modal" style="max-width:520px;">
+    <h3 id="helpTitle">說明</h3>
+    <div id="helpBody" style="font-size:13px;"></div>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="primary" id="closeHelpBtn">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- DIFF MODAL -->
+<div class="overlay" id="diffModal">
+  <div class="modal" style="max-width:480px;">
+    <h3 id="diffTitle">本次排程異動</h3>
+    <div id="diffBody" style="font-size:13px;max-height:50vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="primary" id="closeDiffBtn">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- TASK EDIT MODAL -->
+<div class="overlay" id="taskModal">
+  <div class="modal">
+    <h3 id="taskModalTitle" data-i="editTask">編輯任務</h3>
+    <div class="field"><label data-i="fName">任務名稱</label><input type="text" id="f_name"></div>
+    <div class="row">
+      <div class="field"><label data-i="fDuration">工時（小時）</label><input type="number" id="f_duration" min="1" value="8" step="1"></div>
+      <div class="field"><label data-i="fPriority">優先權 (1-5)</label><input type="number" id="f_priority" min="1" max="5" value="3"></div>
+    </div>
+    <div class="field"><label data-i="fResource">指定資源</label><select id="f_resource"></select></div>
+    <div class="field"><label data-i="fDeps">前置任務（可複選）</label><select id="f_deps" multiple size="4"></select></div>
+    <div class="field"><label data-i="fDeadline">截止日</label><input type="date" id="f_deadline"></div>
+    <div class="field"><label data-i="fStatus">狀態</label>
+      <select id="f_status">
+        <option value="pending" data-i="pending">待排程</option>
+        <option value="inprogress" data-i="inprogress">進行中</option>
+        <option value="done" data-i="done">已完成</option>
+      </select>
+    </div>
+    <div class="field"><label data-i="fProgress">進度 (%)</label><input type="number" id="f_progress" min="0" max="100" value="0"></div>
+    <div class="checkrow"><input type="checkbox" id="f_locked"><label data-i="fLocked">鎖定（不受自動排程影響）</label></div>
+    <div class="modal-actions">
+      <button class="danger ghost" id="deleteTaskBtn" data-i="delete">刪除</button>
+      <div>
+        <button class="ghost" id="cancelTaskBtn" data-i="cancel">取消</button>
+        <button class="primary" id="saveTaskBtn" data-i="save">儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESOURCE EDIT MODAL -->
+<div class="overlay" id="resModal">
+  <div class="modal">
+    <h3 data-i="editRes">編輯資源</h3>
+    <div class="field"><label data-i="rName">資源名稱</label><input type="text" id="r_name"></div>
+    <div class="field"><label data-i="rCapacity">同時可承接任務數</label><input type="number" id="r_capacity" min="1" value="1"></div>
+    <div class="field"><label data-i="rSetup">換線／緩衝時間（小時，做完下一個任務前需要的空檔）</label><input type="number" id="r_setup" min="0" value="0"></div>
+    <div class="modal-actions">
+      <button class="danger ghost" id="deleteResBtn" data-i="delete">刪除</button>
+      <div>
+        <button class="ghost" id="cancelResBtn" data-i="cancel">取消</button>
+        <button class="primary" id="saveResBtn" data-i="save">儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------- crash-safe storage ---------------- */
+const memStore = {};
+const storage = {
+  get(k){ try{ return localStorage.getItem(k);}catch(e){ return memStore[k] ?? null; } },
+  set(k,v){ try{ localStorage.setItem(k,v);}catch(e){ memStore[k]=v; } }
+};
+
+/* ---------------- i18n ---------------- */
+const STR = {
+  zh:{
+    title:"動態排程工具", subtitle:"任務・時程・資源・自動排程＋人工介入",
+    pending:"待排程", inprogress:"進行中", done:"已完成", risk:"逾期風險",
+    lockedHint:"人工鎖定（拖曳後自動鎖定）",
+    dragHint:"提示：拖曳任務條可改變開始日與資源，拖放後會自動鎖定，不會被下一次自動排程移動。點擊任務條可編輯細節。",
+    loadTitlePrefix:"資源負載率（未來 ", loadTitleSuffix:" 天）",
+    tasksTitle:"任務清單", addTask:"+ 新增任務", resourcesTitle:"資源清單", addRes:"+ 新增資源",
+    settingsTitle:"排程設定", horizonLbl:"排程視窗（天）", skipWeekendLbl:"週末不排程",
+    editTask:"編輯任務", fName:"任務名稱", fDuration:"工時（小時）", fPriority:"優先權 (1-5)",
+    fResource:"指定資源（留空＝自動選擇）", fDeps:"前置任務（可複選）", fDeadline:"截止日",
+    fStatus:"狀態", fProgress:"進度 (%)", fLocked:"鎖定（不受自動排程影響）",
+    delete:"刪除", cancel:"取消", save:"儲存", editRes:"編輯資源",
+    rName:"資源名稱", rCapacity:"同時可承接任務數", rSetup:"換線／緩衝時間（小時，做完下一個任務前需要的空檔）",
+    setupHint:"換線／緩衝時間", criticalToggle:"顯示關鍵路徑",
+    csvTemplateBtn:"下載 CSV 範本",
+    csvNote:"CSV 欄位：name,duration,priority,resource,deps,deadline,status,progress。duration 為小時，resource 填資源名稱（留空＝自動；填入不存在的資源名稱會自動新增該資源），deps 是前置任務名稱、多個用「|」分隔。用右上角「匯入」／「匯出」即可存取 CSV（先在旁邊選單選「CSV」）：匯入時任務名稱與現有任務相同會更新該任務，不同則新增為新任務，不會產生重複。",
+    csvImportedPrefix:"已新增 ", csvImportedSuffix:" 筆任務",
+    csvUpdatedPrefix:"，更新 ", csvUpdatedSuffix:" 筆任務",
+    csvNewResourcePrefix:"，新增 ", csvNewResourceSuffix:" 個資源",
+    csvUnresolvedSuffix:" 個前置任務名稱找不到對應任務，已略過。",
+    formatJsonOpt:"JSON（完整備份）", formatCsvOpt:"CSV（任務清單）",
+    exportFormatTitle:"選擇匯出格式：JSON 為完整備份（含資源、排程設定），CSV 只包含任務清單",
+    importBtnTitle:"可匯入 JSON（完整備份，會取代目前資料）或 CSV（任務清單，會與現有任務同步）",
+    diffTitle:"本次排程異動", diffNoChange:"沒有任務被調整位置。", diffClose:"關閉",
+    auto:"▶ 自動排程", exportL:"匯出", importL:"匯入", resetL:"範例資料", resetTestersL:"測試機台範例",
+    kAny:"（自動）", confirmDelTask:"確定刪除此任務？", confirmDelRes:"確定刪除此資源？相關任務會改為未指定資源。",
+    noDeadline:"—", tabs:["總覽","甘特圖","看板","資源負載","任務／資源設定"],
+    atRiskTitle:"逾期風險任務", hotspotTitle:"資源熱點（負載最高）", upNextTitle:"即將開始",
+    statTotal:"任務總數", statOverloaded:"過載資源",
+    noRisk:"目前沒有逾期風險的任務。", noUpNext:"目前沒有即將開始的任務。",
+    thName:"名稱", thDuration:"工時(h)", thPriority:"優先", thResource:"資源",
+    thDeadline:"截止日", thStatus:"狀態", thProgress:"進度%", thLocked:"鎖",
+    thCapacity:"容量", thSetup:"換線(h)", noResources:"目前沒有資源，請先新增。",
+    depArrowsToggle:"顯示相依關係箭頭", jumpToday:"📍 今天", todayTag:"今天",
+    todayOutside:"今天不在目前的排程視窗內。",
+    searchLbl:"搜尋任務", searchPlaceholder:"搜尋任務名稱...",
+    filterStatusLbl:"狀態篩選", filterResourceLbl:"資源篩選", filterAll:"全部",
+    sortLbl:"排序方式", sortPriority:"優先權（高→低）", sortDeadline:"截止日（早→晚）",
+    sortStart:"開始時間", sortName:"名稱", noTasksMatch:"沒有符合條件的任務。",
+    lockAction:"鎖定", unlockAction:"解除鎖定", duplicateAction:"複製任務", copySuffix:"複製",
+    zoomOutTitle:"縮小時間軸", zoomInTitle:"放大時間軸",
+    expandGanttBtn:"⛶ 放大", expandGanttTitle:"全螢幕檢視甘特圖", ganttZoomTitle:"甘特圖（放大檢視）"
+  },
+  en:{
+    title:"Dynamic Scheduler", subtitle:"Tasks · Timeline · Resources · Auto-schedule + manual override",
+    pending:"Pending", inprogress:"In progress", done:"Done", risk:"At risk",
+    lockedHint:"Manually pinned (auto-pinned after drag)",
+    dragHint:"Tip: drag a task bar to change its start day / resource. Dropping auto-pins it so re-scheduling won't move it. Click a bar to edit details.",
+    loadTitlePrefix:"Resource load (next ", loadTitleSuffix:" days)",
+    tasksTitle:"Tasks", addTask:"+ Add task", resourcesTitle:"Resources", addRes:"+ Add resource",
+    settingsTitle:"Scheduling settings", horizonLbl:"Horizon (days)", skipWeekendLbl:"Skip weekends",
+    editTask:"Edit task", fName:"Task name", fDuration:"Duration (hours)", fPriority:"Priority (1-5)",
+    fResource:"Assigned resource (blank = auto)", fDeps:"Dependencies (multi-select)", fDeadline:"Deadline",
+    fStatus:"Status", fProgress:"Progress (%)", fLocked:"Locked (ignored by auto-scheduler)",
+    delete:"Delete", cancel:"Cancel", save:"Save", editRes:"Edit resource",
+    rName:"Resource name", rCapacity:"Concurrent task capacity", rSetup:"Setup/changeover time (hours, buffer needed before the next task)",
+    setupHint:"Setup / changeover buffer", criticalToggle:"Show critical path",
+    csvTemplateBtn:"Download CSV template",
+    csvNote:"CSV columns: name,duration,priority,resource,deps,deadline,status,progress. duration is in hours. resource is a resource name (blank = auto; an unrecognized name creates that resource automatically). deps is a list of dependency task names separated by \"|\". Use \"Import\"/\"Export\" in the top right for CSV (pick \"CSV\" in the menu next to Export) — importing updates any existing task with a matching name instead of duplicating it, and adds anything new.",
+    csvImportedPrefix:"Added ", csvImportedSuffix:" task(s)",
+    csvUpdatedPrefix:", updated ", csvUpdatedSuffix:" task(s)",
+    csvNewResourcePrefix:", added ", csvNewResourceSuffix:" resource(s)",
+    csvUnresolvedSuffix:" dependency name(s) could not be matched and were skipped.",
+    formatJsonOpt:"JSON (full backup)", formatCsvOpt:"CSV (task list)",
+    exportFormatTitle:"Choose the export format: JSON is a full backup (resources, schedule settings included); CSV is just the task list",
+    importBtnTitle:"Accepts a JSON file (full backup, replaces current data) or a CSV file (task list, synced with existing tasks)",
+    diffTitle:"Schedule changes", diffNoChange:"No tasks were moved.", diffClose:"Close",
+    auto:"▶ Auto-schedule", exportL:"Export", importL:"Import", resetL:"Sample data", resetTestersL:"Tester pool example",
+    kAny:"(auto)", confirmDelTask:"Delete this task?", confirmDelRes:"Delete this resource? Its tasks become unassigned.",
+    noDeadline:"—", tabs:["Overview","Gantt","Kanban","Resource load","Tasks / Resources"],
+    atRiskTitle:"At-risk tasks", hotspotTitle:"Resource hotspots (highest load)", upNextTitle:"Coming up",
+    statTotal:"Total tasks", statOverloaded:"Overloaded resources",
+    noRisk:"No tasks are currently at risk.", noUpNext:"Nothing is starting soon.",
+    thName:"Name", thDuration:"Hours", thPriority:"Prio", thResource:"Resource",
+    thDeadline:"Deadline", thStatus:"Status", thProgress:"Prog%", thLocked:"Lock",
+    thCapacity:"Capacity", thSetup:"Setup(h)", noResources:"No resources yet — add one first.",
+    depArrowsToggle:"Show dependency arrows", jumpToday:"📍 Today", todayTag:"Today",
+    todayOutside:"Today is outside the current schedule horizon.",
+    searchLbl:"Search tasks", searchPlaceholder:"Search task name...",
+    filterStatusLbl:"Status filter", filterResourceLbl:"Resource filter", filterAll:"All",
+    sortLbl:"Sort by", sortPriority:"Priority (high→low)", sortDeadline:"Deadline (earliest first)",
+    sortStart:"Start time", sortName:"Name", noTasksMatch:"No tasks match the current filter.",
+    lockAction:"Lock", unlockAction:"Unlock", duplicateAction:"Duplicate task", copySuffix:"copy",
+    zoomOutTitle:"Zoom out timeline", zoomInTitle:"Zoom in timeline",
+    expandGanttBtn:"⛶ Expand", expandGanttTitle:"View Gantt chart fullscreen", ganttZoomTitle:"Gantt Chart (Expanded)"
+  }
+};
+let lang = storage.get('dsched_lang') || 'zh';
+
+function t(key){ return STR[lang][key] ?? key; }
+
+const HELP = {
+  zh:{
+    title:"說明",
+    close:"關閉",
+    body:`
+      <p><b>這是什麼</b><br>
+      這是一個「動態排程」原型：輸入任務、資源與目前狀態，系統會自動排出時程；當狀況改變（新任務、機台異常、進度落後），可重新自動排程，也可以直接用手動拖曳覆蓋結果。</p>
+
+      <p><b>1. 輸入資料（任務／資源設定）</b><br>
+      · <b>任務</b>：名稱、工時（小時）、優先權(1-5，數字越大越優先)、前置任務（依賴哪些任務要先完成）、指定資源（留空＝讓系統自動挑最早有空的資源）、截止日、狀態、進度、鎖定。<br>
+      · <b>資源</b>：名稱、同時可承接任務數（例如 3 台機台輪流用，可設 3 個資源，或設一個資源容量=3）。可隨時新增／刪除。<br>
+      · 甘特圖以「班別」為最小顯示單位：每天分早（00-08）、中（08-16）、晚（16-24）三班，工時會自動無條件進位到最接近的班數（例如 10 小時會佔用 2 個班）。</p>
+
+      <p><b>2. 自動排程</b><br>
+      按「▶ 自動排程」後，系統會：先依「前置任務」決定順序（沒做完的依賴任務會擋住後面任務），再依「優先權→截止日」排序，逐一幫每個任務在指定或最早可用的資源上找最早的空檔。已完成／進行中／已鎖定的任務不會被移動。</p>
+
+      <p><b>2a. 排程演算法怎麼跑（技術細節）</b><br>
+      這是規則式演算法，不是 AI，步驟固定、可重複驗證：<br>
+      ① 先把「已完成／進行中／已鎖定」的任務視為固定，把它們佔用的資源時段先劃記起來。<br>
+      ② 剩下「待排程且未鎖定」的任務，用<b>拓樸排序</b>整理依賴關係：算出每個任務還有幾個前置任務沒排定。<br>
+      ③ 從「前置任務都已排定」的任務中，挑<b>優先權最高</b>的一個；優先權相同時比<b>截止日較早</b>的。<br>
+      ④ 這個任務最早能開始的班次＝它所有前置任務完成的那個班次中最晚的（沒有前置任務就從第0班開始算）。<br>
+      ⑤ 若任務有指定資源，就在那個資源上，從最早開始班次往後找第一個「連續所需班數內都還有容量、且不是週末（若開啟跳過週末）」的空檔；若沒指定資源，則對每個資源都算一次最早空檔，取其中最早可用的那一個（這就是「共用資源池自動分配」的原理）。<br>
+      ⑥ 排定後把該資源在這段時間的容量佔用記下來，並記錄完成時間，讓依賴它的下一個任務可以往下計算。<br>
+      ⑦ 重複②-⑥直到所有待排任務都排完；若遇到循環依賴（A等B、B又等A）會自動跳過依賴限制、強制排入，避免卡死。</p>
+
+      <p><b>3. 人工介入</b><br>
+      在甘特圖上直接拖曳任務條，可改變開始日與所屬資源；放開後該任務會自動被「鎖定」📌，之後重新自動排程也不會移動它。也可以點任務條或到清單裡點任務，開啟編輯視窗調整任何欄位、解除鎖定，或刪除任務。</p>
+
+      <p><b>4. 五種檢視畫面</b><br>
+      · <b>總覽</b>：一打開就看到的儀表板——任務數量統計、逾期風險任務、資源負載熱點、即將開始的任務，點清單項目可直接開編輯視窗。<br>
+      · <b>甘特圖</b>：時間 × 資源總覽，主要工作畫面。<br>
+      · <b>看板</b>：依狀態（待排程／進行中／已完成）分欄。<br>
+      · <b>資源負載</b>：各資源在排程視窗內的使用率，超過100%代表過載。<br>
+      · <b>任務／資源設定</b>：任務與資源清單皆為「直接編輯」表格——欄位（名稱、工時、優先權、資源、截止日、狀態、進度等）可直接點擊修改，改完欄位（按 Tab 或點別處）就自動儲存，不必每次開編輯視窗；任務列右側的 ✎ 仍可開完整編輯視窗（用於設定前置任務等表格裡放不下的欄位）。也可設定排程視窗天數、是否跳過週末。</p>
+
+      <p><b>圖例</b><br>
+      灰藍色＝待排程；琥珀色＝進行中；綠色＝已完成；紅框＝有逾期風險（超過設定的截止日）；📌＝人工鎖定；白色內框＝關鍵路徑；斜線色塊＝換線/緩衝時間。</p>
+
+      <p><b>5. 進階功能</b><br>
+      · <b>換線／緩衝時間</b>：在「編輯資源」設定，代表這台資源做完一個任務後，要隔幾小時才能接下一個（例如機台清潔、換 recipe），會自動無條件進位到整班。排程時會自動把這段時間也算進去，甘特圖上以斜線色塊顯示在任務條後面。<br>
+      · <b>關鍵路徑</b>：勾選甘特圖上方「顯示關鍵路徑」，系統會從最晚完成的任務往回追蹤「決定整體完成時間」的那條依賴鏈，並用白色內框標出。（簡化版：只沿依賴鏈回溯，若某任務是被資源排隊卡住而非依賴卡住，可能不會被算進這條鏈。）<br>
+      · <b>排程異動比較</b>：每次按「自動排程」後，會跳出視窗列出哪些任務的時間或資源被改變（原本 → 現在），方便跟現場對照確認。<br>
+      · <b>匯入／匯出（JSON 或 CSV）</b>：右上角「匯出」旁的選單可選擇格式──JSON 是完整備份（含資源、排程設定，匯入會「取代」目前所有資料，適合換電腦或還原備份）；CSV 只有任務清單（適合用 Excel 整批編輯任務）。CSV 匯入會與現有任務「同步」：任務名稱相同就更新該任務的欄位（不會變成重複任務、也不會動到它已排定的時間或鎖定狀態），名稱不同則新增為新任務；若 resource 欄位填了目前不存在的資源名稱，會自動新增該資源。deps 欄位用任務名稱、多個以「|」分隔，系統會自動比對成依賴關係。「任務／資源設定」頁可下載 CSV 範本，照著欄位格式在 Excel 整理即可。<br>
+      · <b>建議流程</b>：匯入／同步任務資料 → 按「▶ 自動排程」讓系統先自動排出時程 → 視現場狀況在甘特圖上手動拖曳微調（拖放後自動鎖定，不會被下一次自動排程移動），逐步把時程調到符合實際情況。<br>
+      · <b>今天標記線</b>：甘特圖上會有一條紅色直線標出現在的時間；按右上方「📍 今天」可自動捲動到那個位置（若今天不在目前排程視窗內會提示）。<br>
+      · <b>相依關係箭頭</b>：勾選「顯示相依關係箭頭」，會在甘特圖上以箭頭連線標出任務之間的前置／後續關係，方便一眼看出誰在等誰。<br>
+      · <b>任務清單搜尋／篩選／排序</b>：「任務／資源設定」頁的任務清單可依名稱搜尋、依狀態或資源篩選、依優先權／截止日／開始時間／名稱排序；每筆任務旁也有快速按鈕可直接鎖定/解鎖 📌、複製 ⧉、刪除 🗑，不必每次都開編輯視窗。</p>
+
+      <p><b>其他</b><br>
+      右上角可切換中/英文與深/淺色主題；「匯出／匯入」支援 JSON（完整備份）與 CSV（任務清單，見上方說明）；「範例資料」「測試機台範例」可載入現成範例快速體驗。</p>
+    `
+  },
+  en:{
+    title:"Help",
+    close:"Close",
+    body:`
+      <p><b>What this is</b><br>
+      A dynamic scheduling prototype: enter tasks, resources, and current status, and the system auto-generates a timeline. When things change (a new task, equipment down, slipping progress), re-run auto-schedule — or override the result directly by dragging.</p>
+
+      <p><b>1. Entering data (Tasks / Resources tab)</b><br>
+      · <b>Task</b>: name, duration (hours), priority (1-5, higher = more urgent), dependencies (which tasks must finish first), assigned resource (blank = let the system pick the earliest free one), deadline, status, progress, lock.<br>
+      · <b>Resource</b>: name, concurrent capacity (e.g. 3 interchangeable machines can be 3 separate resources, or one resource with capacity 3). Add/remove anytime.<br>
+      · The Gantt chart's smallest unit is a <b>shift</b>: each day is split into Early (00-08), Mid (08-16), and Night (16-24). Duration in hours is rounded up to the nearest whole shift (e.g. 10 hours occupies 2 shifts).</p>
+
+      <p><b>2. Auto-schedule</b><br>
+      Clicking "▶ Auto-schedule" first orders tasks by dependencies (an unfinished dependency blocks what comes after it), then by priority → deadline, and places each task in the earliest open slot on its assigned or best-available resource. Done, in-progress, or locked tasks are never moved.</p>
+
+      <p><b>2a. How the algorithm actually runs (technical detail)</b><br>
+      This is a deterministic rule-based algorithm, not AI — same input always gives the same output:<br>
+      ① Treat every done / in-progress / locked task as fixed, and mark the resource time it already occupies.<br>
+      ② For the remaining pending, unlocked tasks, build a <b>topological order</b> from the dependency graph: track how many of each task's dependencies are still unscheduled.<br>
+      ③ Among tasks whose dependencies are all scheduled, pick the one with the <b>highest priority</b>; ties go to the <b>earlier deadline</b>.<br>
+      ④ That task's earliest possible start = the latest finish among its dependencies' shifts (shift 0 if it has none).<br>
+      ⑤ If the task has an assigned resource, scan forward from that starting shift for the first window where the resource has spare capacity for the required number of shifts (and isn't a weekend, if skip-weekends is on). If no resource is assigned, do that same search for every resource and take whichever gives the earliest slot — this is how the "shared resource pool" auto-assignment works.<br>
+      ⑥ Once placed, mark that resource's capacity as used for that window and record the finish time so dependent tasks can be computed next.<br>
+      ⑦ Repeat ②–⑥ until every pending task is placed; a circular dependency (A waits on B, B waits on A) is detected and forced through without blocking, so scheduling never deadlocks.</p>
+
+      <p><b>3. Manual override</b><br>
+      Drag a task bar on the Gantt chart to change its start day and resource; on drop it's automatically pinned 📌 so future auto-scheduling won't move it. Click a bar (or a task in the list) to open the edit dialog — change any field, unlock it, or delete it.</p>
+
+      <p><b>4. Five views</b><br>
+      · <b>Overview</b>: the dashboard you land on — task counts, at-risk tasks, resource load hotspots, and what's starting soon. Click any list item to open its edit dialog.<br>
+      · <b>Gantt</b>: time × resource overview, the main working view.<br>
+      · <b>Kanban</b>: grouped by status (pending / in progress / done).<br>
+      · <b>Resource load</b>: utilization of each resource within the scheduling horizon; over 100% means overloaded.<br>
+      · <b>Tasks / Resources</b>: both lists are directly-editable tables — click any cell (name, hours, priority, resource, deadline, status, progress, etc.) to change it; it saves automatically on Tab/blur, no dialog needed for routine edits. The ✎ button on a task row still opens the full edit dialog for fields that don't fit a table cell (like dependencies). You can also set the horizon length and whether to skip weekends here.</p>
+
+      <p><b>Legend</b><br>
+      Slate blue = pending; amber = in progress; sage green = done; red outline = at risk of missing its deadline; 📌 = manually pinned; white inner border = on the critical path; diagonal-stripe block = setup/changeover buffer.</p>
+
+      <p><b>5. Advanced features</b><br>
+      · <b>Setup/changeover time</b>: set in "Edit resource" — how many hours (rounded up to a whole shift) a resource needs after finishing one task before it can start the next (cleaning, recipe change, etc). The scheduler accounts for this automatically; it shows as a diagonal-stripe block right after the task bar on the Gantt chart.<br>
+      · <b>Critical path</b>: check "Show critical path" above the Gantt chart. The system walks backward from the latest-finishing task through whichever dependency chain actually determines the overall finish date, and outlines those bars in white. (Simplified: it only follows the dependency chain — a task delayed purely by resource queueing rather than a dependency may not appear on this chain.)<br>
+      · <b>Schedule change diff</b>: every time you click "Auto-schedule," a dialog lists which tasks moved and where (old → new), so you can quickly compare against what changed.<br>
+      · <b>Import/Export (JSON or CSV)</b>: the menu next to "Export" in the top right picks the format — JSON is a full backup (resources and schedule settings included; importing it <i>replaces</i> everything currently loaded, good for moving to another computer or restoring a backup); CSV is just the task list (good for bulk-editing tasks in Excel). Importing a CSV <i>syncs</i> with existing tasks: a matching task name updates that task's fields (never a duplicate, and its current schedule/lock is left untouched), a new name adds a new task; an unrecognized resource name in the resource column creates that resource automatically. The deps column uses task names separated by "|" and gets matched into dependencies automatically. Download a CSV template from the Tasks/Resources tab to see the exact columns to fill in Excel.<br>
+      · <b>Suggested workflow</b>: import/sync your task data → click "▶ Auto-schedule" to let the system lay out an initial timeline → drag bars on the Gantt chart to manually fine-tune for real-world conditions (a drop auto-pins the task so future auto-scheduling won't move it), refining the schedule step by step.<br>
+      · <b>Today marker</b>: a red vertical line on the Gantt chart shows the current date/time. Click "📍 Today" in the top right to auto-scroll to it (it warns if today falls outside the current horizon).<br>
+      · <b>Dependency arrows</b>: check "Show dependency arrows" to draw connector lines between tasks on the Gantt chart, so you can see at a glance which task is waiting on which.<br>
+      · <b>Task list search / filter / sort</b>: on the Tasks/Resources tab, search tasks by name, filter by status or resource, and sort by priority / deadline / start time / name. Each row also has quick buttons to lock/unlock 📌, duplicate ⧉, or delete 🗑 without opening the edit dialog.</p>
+
+      <p><b>Other</b><br>
+      Top right: switch language / theme. "Export"/"Import" support both JSON (full backup) and CSV (task list, see above). "Sample data" and "Tester pool example" load ready-made scenarios to try quickly.</p>
+    `
+  }
+};
+
+function applyLanguage(){
+  document.getElementById('appTitle').childNodes[0].nodeValue = t('title');
+  document.getElementById('appSubtitle').textContent = t('subtitle');
+  document.querySelectorAll('[data-i]').forEach(el=>{
+    const k = el.getAttribute('data-i');
+    if(STR[lang][k]!==undefined) el.textContent = STR[lang][k];
+  });
+  document.getElementById('autoScheduleBtn').textContent = t('auto');
+  document.getElementById('exportBtn').textContent = t('exportL');
+  document.getElementById('importBtn').textContent = t('importL');
+  document.getElementById('resetBtn').textContent = t('resetL');
+  document.getElementById('resetTestersBtn').textContent = t('resetTestersL');
+  const tabs = document.querySelectorAll('.tab');
+  STR[lang].tabs.forEach((label,i)=>{ if(tabs[i]) tabs[i].textContent = label; });
+  document.getElementById('loadTitleEl').innerHTML = t('loadTitlePrefix')+'<span id="horizonSpan"></span>'+t('loadTitleSuffix');
+  document.getElementById('taskSearchInput').placeholder = t('searchPlaceholder');
+  document.getElementById('zoomOutBtn').title = t('zoomOutTitle');
+  document.getElementById('zoomInBtn').title = t('zoomInTitle');
+  document.getElementById('expandGanttBtn').title = t('expandGanttTitle');
+  document.getElementById('exportFormatSel').title = t('exportFormatTitle');
+  document.getElementById('importBtn').title = t('importBtnTitle');
+  fillHelp();
+  render();
+}
+
+/* ---------------- state ---------------- */
+let state = null;
+let showCritical = true;
+let showDeps = false;
+let taskFilter = { search:'', status:'all', resource:'all', sort:'priority' };
+
+/* ---------------- gantt zoom ---------------- */
+const ZOOM_LEVELS = [0.6, 0.8, 1, 1.25, 1.5, 1.75, 2, 2.5];
+const BASE_SHIFT_WIDTH = 34;
+let zoomIdx = (function(){
+  const saved = parseFloat(storage.get('dsched_zoom'));
+  const idx = ZOOM_LEVELS.indexOf(saved);
+  return idx>=0 ? idx : ZOOM_LEVELS.indexOf(1.25);
+})();
+function shiftWidth(){ return BASE_SHIFT_WIDTH * ZOOM_LEVELS[zoomIdx]; }
+function updateZoomLabel(){ document.getElementById('zoomLabel').textContent = Math.round(ZOOM_LEVELS[zoomIdx]*100)+'%'; }
+
+function defaultState(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  return {
+    startDate: today.toISOString().slice(0,10),
+    horizon: 12,
+    skipWeekend: true,
+    resources: [
+      {id:'r1', name:'光罩/Photo Bay', capacity:1, setupTime:0},
+      {id:'r2', name:'蝕刻/Etch Bay', capacity:1, setupTime:4},
+      {id:'r3', name:'CMP', capacity:1, setupTime:4},
+      {id:'r4', name:'量測/Metrology', capacity:2, setupTime:0},
+      {id:'r5', name:'爐管/Furnace', capacity:1, setupTime:8}
+    ],
+    tasks: [
+      {id:'t1', name:'Lot A - Photo Litho', duration:16, priority:5, deps:[], resource:'r1', deadline:'', status:'inprogress', progress:40, locked:false, start:0},
+      {id:'t2', name:'Lot A - Etch', duration:16, priority:5, deps:['t1'], resource:'r2', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'t3', name:'Lot A - CMP', duration:8, priority:4, deps:['t2'], resource:'r3', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'t4', name:'Lot A - CD-SEM 量測', duration:8, priority:3, deps:['t3'], resource:'r4', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'t5', name:'Lot B - Photo Litho', duration:16, priority:3, deps:[], resource:'r1', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'t6', name:'Lot B - Furnace Anneal', duration:24, priority:2, deps:['t5'], resource:'r5', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'t7', name:'Lot B - Etch', duration:16, priority:4, deps:['t5'], resource:'r2', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'t8', name:'Lot C - Photo Litho', duration:8, priority:2, deps:[], resource:'', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'t9', name:'Lot C - 量測抽驗', duration:8, priority:1, deps:['t8'], resource:'r4', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'t10', name:'緊急插單 - Rework Etch', duration:8, priority:5, deps:[], resource:'r2', deadline:'', status:'pending', progress:0, locked:false, start:null}
+    ]
+  };
+}
+
+function loadState(){
+  const raw = storage.get('dsched_state');
+  if(raw){ try{ return JSON.parse(raw); }catch(e){ /* fall through */ } }
+  return defaultState();
+}
+function saveState(){ storage.set('dsched_state', JSON.stringify(state)); }
+
+function testerPoolState(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  return {
+    startDate: today.toISOString().slice(0,10),
+    horizon: 10,
+    skipWeekend: true,
+    resources: [
+      {id:'m1', name:'測試機台 1 / Tester 1', capacity:1, setupTime:1},
+      {id:'m2', name:'測試機台 2 / Tester 2', capacity:1, setupTime:1},
+      {id:'m3', name:'測試機台 3 / Tester 3', capacity:1, setupTime:1}
+    ],
+    tasks: [
+      // 三台機台是共用資源池：以下任務多數不指定機台（resource:''），排程器會自動挑最早可用的一台
+      {id:'x10', name:'機台校正 Calibration (機台2)', duration:8, priority:5, deps:[], resource:'m2', deadline:'', status:'pending', progress:0, locked:true, start:0},
+      {id:'x9', name:'客退品重測 RMA Retest (急件)', duration:8, priority:5, deps:[], resource:'', deadline:'', status:'pending', progress:0, locked:false, start:null},
+
+      {id:'x1', name:'Lot A - 功能測試 FT', duration:8, priority:4, deps:[], resource:'', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'x2', name:'Lot A - 老化測試 Burn-in', duration:24, priority:3, deps:['x1'], resource:'', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'x3', name:'Lot A - 最終測試 Final Test', duration:8, priority:3, deps:['x2'], resource:'', deadline:'', status:'pending', progress:0, locked:false, start:null},
+
+      {id:'x4', name:'Lot B - 功能測試 FT', duration:8, priority:4, deps:[], resource:'', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'x5', name:'Lot B - 老化測試 Burn-in', duration:24, priority:3, deps:['x4'], resource:'', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'x6', name:'Lot B - 最終測試 Final Test', duration:8, priority:3, deps:['x5'], resource:'', deadline:'2026-09-20', status:'pending', progress:0, locked:false, start:null},
+
+      {id:'x7', name:'Lot C - 功能測試 FT', duration:8, priority:3, deps:[], resource:'', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'x8', name:'Lot C - 最終測試 Final Test', duration:8, priority:2, deps:['x7'], resource:'', deadline:'', status:'pending', progress:0, locked:false, start:null},
+
+      {id:'x11', name:'Lot D - 功能測試 FT', duration:8, priority:2, deps:[], resource:'', deadline:'', status:'pending', progress:0, locked:false, start:null},
+      {id:'x12', name:'Lot D - 老化測試 Burn-in', duration:16, priority:2, deps:['x11'], resource:'', deadline:'', status:'pending', progress:0, locked:false, start:null}
+    ]
+  };
+}
+
+/* ---------------- date helpers ---------------- */
+function dateAt(dayIdx){
+  const d = new Date(state.startDate+'T00:00:00');
+  d.setDate(d.getDate()+dayIdx);
+  return d;
+}
+function isWeekend(dayIdx){
+  const dow = dateAt(dayIdx).getDay();
+  return dow===0 || dow===6;
+}
+function fmtDay(dayIdx){
+  const d = dateAt(dayIdx);
+  return (d.getMonth()+1)+'/'+d.getDate();
+}
+const DOW = {zh:['日','一','二','三','四','五','六'], en:['Su','Mo','Tu','We','Th','Fr','Sa']};
+
+/* ---------------- shift/hour granularity helpers ---------------- */
+const SHIFTS_PER_DAY = 3;
+const HOURS_PER_SHIFT = 8;
+const SHIFT_SHORT = {zh:['早','中','晚'], en:['E','M','N']};
+const SHIFT_FULL = {zh:['早班 00-08','中班 08-16','晚班 16-24'], en:['Early 00-08','Mid 08-16','Night 16-24']};
+
+function totalSlots(){ return state.horizon * SHIFTS_PER_DAY; }
+function dayOfSlot(slot){ return Math.floor(slot / SHIFTS_PER_DAY); }
+function shiftOfSlot(slot){ return ((slot % SHIFTS_PER_DAY) + SHIFTS_PER_DAY) % SHIFTS_PER_DAY; }
+function isWeekendSlot(slot){ return isWeekend(dayOfSlot(slot)); }
+function slotsOfHours(hours){ return Math.max(1, Math.ceil((hours||1)/HOURS_PER_SHIFT)); }
+function setupSlotsOfHours(hours){ return Math.max(0, Math.ceil((hours||0)/HOURS_PER_SHIFT)); }
+function slotLabel(slot){ return fmtDay(dayOfSlot(slot))+' '+SHIFT_SHORT[lang][shiftOfSlot(slot)]; }
+function dateTimeAtSlot(slot){
+  const d = dateAt(dayOfSlot(slot));
+  d.setHours(shiftOfSlot(slot)*HOURS_PER_SHIFT);
+  return d;
+}
+
+/* ---------------- scheduler ---------------- */
+function autoSchedule(){
+  const tasks = state.tasks;
+  const resources = state.resources;
+  const byId = Object.fromEntries(tasks.map(t=>[t.id,t]));
+
+  const fixed = tasks.filter(t=> t.status!=='pending' || t.locked);
+  const schedulable = tasks.filter(t=> t.status==='pending' && !t.locked);
+
+  const finishOf = {};
+  fixed.forEach(t=>{ finishOf[t.id] = (t.start ?? 0) + slotsOfHours(t.duration); });
+
+  const busy = {};
+  resources.forEach(r=> busy[r.id] = {});
+  function setupOf(resId){ const r=resources.find(x=>x.id===resId); return r? setupSlotsOfHours(r.setupTime):0; }
+  function occupy(resId, start, durationSlots){
+    if(!busy[resId]) busy[resId]={};
+    for(let d=start; d<start+durationSlots; d++) busy[resId][d] = (busy[resId][d]||0)+1;
+    const cap = capOf(resId);
+    const setup = setupOf(resId);
+    for(let d=start+durationSlots; d<start+durationSlots+setup; d++) busy[resId][d] = cap; // changeover buffer fully blocks the resource
+  }
+  function capOf(resId){ const r=resources.find(x=>x.id===resId); return r? r.capacity:1; }
+  function fits(resId, start, durationSlots){
+    const cap = capOf(resId);
+    for(let d=start; d<start+durationSlots; d++){
+      if(state.skipWeekend && isWeekendSlot(d)) return false;
+      if((busy[resId][d]||0) >= cap) return false;
+    }
+    return true;
+  }
+  fixed.forEach(t=>{ if(t.resource && t.start!=null) occupy(t.resource, t.start, slotsOfHours(t.duration)); });
+
+  const schedIds = new Set(schedulable.map(t=>t.id));
+  const remainingDeps = new Map(schedulable.map(t=>[t.id, new Set(t.deps.filter(d=>schedIds.has(d)))]));
+
+  function deadlineVal(t){ return t.deadline? new Date(t.deadline).getTime() : Infinity; }
+
+  let guard = 0;
+  while(remainingDeps.size>0 && guard < tasks.length*3+50){
+    guard++;
+    let ready = [...remainingDeps.entries()].filter(([id,deps])=>deps.size===0).map(([id])=>byId[id]);
+    if(ready.length===0){
+      // circular dependency fallback: pick any remaining, ignore deps to avoid deadlock
+      ready = [...remainingDeps.keys()].map(id=>byId[id]);
+    }
+    ready.sort((a,b)=> b.priority-a.priority || deadlineVal(a)-deadlineVal(b) || a.id.localeCompare(b.id));
+    const task = ready[0];
+    const earliestStart = Math.max(0, ...task.deps.map(d=> finishOf[d]!==undefined? finishOf[d] : 0));
+
+    let resId = task.resource;
+    let start;
+    const durSlots = slotsOfHours(task.duration);
+    if(resId){
+      start = earliestStart;
+      while(!fits(resId,start,durSlots)) start++;
+    } else {
+      let best=null;
+      resources.forEach(r=>{
+        let s = earliestStart;
+        while(!fits(r.id,s,durSlots)) s++;
+        if(best===null || s<best.start) best = {resId:r.id, start:s};
+      });
+      resId = best.resId; start = best.start;
+    }
+    task.resource = resId; task.start = start;
+    occupy(resId, start, durSlots);
+    finishOf[task.id] = start + durSlots;
+    remainingDeps.delete(task.id);
+    remainingDeps.forEach(depsSet=> depsSet.delete(task.id));
+  }
+  saveState();
+  render();
+}
+
+function computeCriticalPath(){
+  const placed = state.tasks.filter(t=> t.start!=null);
+  if(placed.length===0) return new Set();
+  let last = placed.reduce((a,b)=> (a.start+slotsOfHours(a.duration)) >= (b.start+slotsOfHours(b.duration)) ? a : b);
+  const path = new Set();
+  let cur = last;
+  let guard = 0;
+  while(cur && guard < state.tasks.length+5){
+    guard++;
+    path.add(cur.id);
+    const deps = (cur.deps||[]).map(id=> placed.find(t=>t.id===id)).filter(Boolean);
+    if(deps.length===0) break;
+    deps.sort((a,b)=> (b.start+slotsOfHours(b.duration))-(a.start+slotsOfHours(a.duration)));
+    cur = deps[0];
+  }
+  return path;
+}
+
+function runAutoScheduleWithDiff(){
+  const before = new Map(state.tasks.map(t=>[t.id, {start:t.start, resource:t.resource}]));
+  autoSchedule();
+  const changes = [];
+  state.tasks.forEach(t=>{
+    const prev = before.get(t.id);
+    if(!prev) return;
+    if(prev.start !== t.start || prev.resource !== t.resource) changes.push({task:t, prev});
+  });
+  showDiff(changes);
+}
+
+function resNameOf(id){ const r = state.resources.find(x=>x.id===id); return r? r.name : t('kAny'); }
+function dayLabelOf(start, durationHours){
+  if(start==null) return '—';
+  const slots = slotsOfHours(durationHours);
+  return slotLabel(start)+'–'+slotLabel(start+slots-1);
+}
+
+function showDiff(changes){
+  document.getElementById('diffTitle').textContent = t('diffTitle');
+  document.getElementById('closeDiffBtn').textContent = t('diffClose');
+  const body = document.getElementById('diffBody');
+  if(changes.length===0){
+    body.innerHTML = '<p style="color:var(--text-dim);">'+t('diffNoChange')+'</p>';
+  } else {
+    body.innerHTML = changes.map(({task,prev})=>{
+      const oldLabel = prev.start!=null ? dayLabelOf(prev.start, task.duration)+' · '+resNameOf(prev.resource) : '—';
+      const newLabel = dayLabelOf(task.start, task.duration)+' · '+resNameOf(task.resource);
+      return '<div class="diff-row"><b>'+task.name+'</b><span>'+oldLabel+' <span class="arrow">→</span> '+newLabel+'</span></div>';
+    }).join('');
+  }
+  document.getElementById('diffModal').classList.add('show');
+}
+
+/* ---------------- rendering ---------------- */
+function statusClass(t){
+  if(t.status==='done') return 'done';
+  if(t.status==='inprogress') return 'inprogress';
+  return 'pending';
+}
+function isAtRisk(t){
+  if(!t.deadline || t.start==null) return false;
+  const finishDateTime = dateTimeAtSlot(t.start + slotsOfHours(t.duration));
+  return finishDateTime.getTime() > new Date(t.deadline+'T23:59:59').getTime();
+}
+
+function renderGantt(){
+  const root = document.getElementById('ganttRoot');
+  const slots = totalSlots();
+  const shiftw = shiftWidth();
+  root.style.setProperty('--slots', slots);
+  root.style.setProperty('--shiftw', shiftw+'px');
+  root.innerHTML='';
+
+  const criticalSet = showCritical ? computeCriticalPath() : new Set();
+
+  // day-group header row (each cell spans 3 shift columns)
+  const dayHeader = document.createElement('div');
+  dayHeader.className='gantt-row header-row';
+  const corner1 = document.createElement('div');
+  corner1.className='corner';
+  corner1.textContent = lang==='zh' ? '資源 / 日期' : 'Resource / Date';
+  dayHeader.appendChild(corner1);
+  for(let d=0; d<state.horizon; d++){
+    const c = document.createElement('div');
+    c.className='daycell-hdr'+(isWeekend(d)?' weekend':'')+(d%2===1?' day-alt':'');
+    c.style.gridColumn = 'span '+SHIFTS_PER_DAY;
+    c.innerHTML = fmtDay(d)+'<span class="dow">'+DOW[lang][dateAt(d).getDay()]+'</span>';
+    dayHeader.appendChild(c);
+  }
+  root.appendChild(dayHeader);
+
+  // shift header row (early/mid/night per day)
+  const shiftHeader = document.createElement('div');
+  shiftHeader.className='gantt-row header-row';
+  const corner2 = document.createElement('div');
+  corner2.className='corner';
+  corner2.textContent = '';
+  shiftHeader.appendChild(corner2);
+  for(let s=0; s<slots; s++){
+    const c = document.createElement('div');
+    c.className='daycell-hdr'+(isWeekendSlot(s)?' weekend':'')+(shiftOfSlot(s)===0?' day-start':'')+(dayOfSlot(s)%2===1?' day-alt':'');
+    c.style.fontSize='10px';
+    c.title = SHIFT_FULL[lang][shiftOfSlot(s)];
+    c.textContent = SHIFT_SHORT[lang][shiftOfSlot(s)];
+    shiftHeader.appendChild(c);
+  }
+  root.appendChild(shiftHeader);
+
+  state.resources.forEach(res=>{
+    const row = document.createElement('div');
+    row.className='gantt-row';
+    const label = document.createElement('div');
+    label.className='res-label';
+    label.innerHTML = '<span>'+res.name+'<small>cap '+res.capacity+(res.setupTime?' · setup '+res.setupTime+'h':'')+'</small></span>';
+    row.appendChild(label);
+
+    for(let s=0; s<slots; s++){
+      const cell = document.createElement('div');
+      cell.className='daycell'+(isWeekendSlot(s)?' weekend':'')+(shiftOfSlot(s)===0?' day-start':'')+(dayOfSlot(s)%2===1?' day-alt':'');
+      cell.dataset.resource = res.id;
+      cell.dataset.slot = s;
+      row.appendChild(cell);
+    }
+    root.appendChild(row);
+  });
+
+  // place task bars using absolute positioning relative to gantt (compute pixel offsets)
+  const rows = root.querySelectorAll('.gantt-row:not(.header-row)');
+  state.resources.forEach((res, idx)=>{
+    const rowEl = rows[idx];
+    const cells = rowEl.querySelectorAll('.daycell');
+    if(cells.length===0) return;
+    cells.forEach(c=> c.style.position='relative');
+    state.tasks.filter(t=> t.resource===res.id && t.start!=null && t.start < slots).forEach(task=>{
+      const durSlots = slotsOfHours(task.duration);
+      const startIdx = Math.max(0, task.start);
+      const span = Math.min(durSlots, slots-startIdx);
+      if(span<=0) return;
+      const startCell = cells[startIdx];
+      const bar = document.createElement('div');
+      bar.className = 'taskbar '+statusClass(task)+(isAtRisk(task)?' risk':'')+(task.locked?' locked':'')+(criticalSet.has(task.id)?' critical':'');
+      bar.style.width = (span*shiftw - 4)+'px';
+      bar.style.left='2px';
+      bar.textContent = task.name;
+      bar.title = task.name+' ('+task.duration+'h, P'+task.priority+')';
+      bar.dataset.taskbar = task.id;
+      attachBarDrag(bar, task);
+      startCell.appendChild(bar);
+
+      if(res.setupTime>0){
+        const setupSlots = setupSlotsOfHours(res.setupTime);
+        const setupStart = task.start + durSlots;
+        const setupSpan = Math.min(setupSlots, slots - setupStart);
+        if(setupSpan>0 && setupStart < slots && setupStart>=0){
+          const setupCell = cells[setupStart];
+          const setupBar = document.createElement('div');
+          setupBar.className = 'setupbar';
+          setupBar.style.width = (setupSpan*shiftw - 4)+'px';
+          setupBar.style.left='2px';
+          setupBar.title = t('setupHint')+' ('+res.setupTime+'h)';
+          setupCell.appendChild(setupBar);
+        }
+      }
+    });
+  });
+
+  const todayFrac = todaySlotFraction();
+  if(todayFrac!=null){
+    const marker = document.createElement('div');
+    marker.className = 'today-line';
+    marker.style.left = (150 + todayFrac*shiftw)+'px';
+    marker.innerHTML = '<span class="tag">'+t('todayTag')+'</span>';
+    root.appendChild(marker);
+  }
+
+  if(showDeps) drawDependencyArrows(root);
+}
+
+/* ---------------- pointer-based drag (mouse + touch) ---------------- */
+let dragState = null;
+function attachBarDrag(bar, task){
+  bar.addEventListener('pointerdown', e=>{
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    dragState = {taskId:task.id, pointerId:e.pointerId, startX:e.clientX, startY:e.clientY, moved:false, hoverCell:null, bar};
+    bar.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  bar.addEventListener('pointermove', e=>{
+    if(!dragState || dragState.pointerId!==e.pointerId) return;
+    const dx = e.clientX-dragState.startX, dy = e.clientY-dragState.startY;
+    if(!dragState.moved && Math.hypot(dx,dy)>5){
+      dragState.moved = true;
+      bar.classList.add('dragging');
+    }
+    if(dragState.moved){
+      document.querySelectorAll('.daycell.over').forEach(c=>c.classList.remove('over'));
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const cell = el && el.closest('.daycell');
+      dragState.hoverCell = cell || null;
+      if(cell) cell.classList.add('over');
+    }
+  });
+  bar.addEventListener('pointerup', e=>{
+    if(!dragState || dragState.pointerId!==e.pointerId) return;
+    bar.releasePointerCapture(e.pointerId);
+    const ds = dragState; dragState = null;
+    document.querySelectorAll('.daycell.over').forEach(c=>c.classList.remove('over'));
+    if(!ds.moved){ openTaskModal(ds.taskId); return; }
+    if(ds.hoverCell){
+      const tk = state.tasks.find(x=>x.id===ds.taskId);
+      tk.resource = ds.hoverCell.dataset.resource;
+      tk.start = parseInt(ds.hoverCell.dataset.slot,10);
+      tk.locked = true;
+      saveState(); render();
+    } else {
+      render();
+    }
+  });
+  bar.addEventListener('pointercancel', ()=>{
+    dragState = null;
+    document.querySelectorAll('.daycell.over').forEach(c=>c.classList.remove('over'));
+  });
+}
+
+/* ---------------- today marker ---------------- */
+function todaySlotFraction(){
+  const now = new Date();
+  const start = new Date(state.startDate+'T00:00:00');
+  const dayIdx = Math.floor((now-start)/86400000);
+  if(dayIdx<0 || dayIdx>=state.horizon) return null;
+  const hourFrac = now.getHours() + now.getMinutes()/60;
+  return dayIdx*SHIFTS_PER_DAY + hourFrac/HOURS_PER_SHIFT;
+}
+
+/* ---------------- dependency arrows overlay ---------------- */
+function drawDependencyArrows(root){
+  const rootRect = root.getBoundingClientRect();
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS,'svg');
+  svg.setAttribute('width', root.scrollWidth);
+  svg.setAttribute('height', root.scrollHeight);
+  svg.style.position='absolute'; svg.style.left='0'; svg.style.top='0';
+  svg.style.pointerEvents='none'; svg.style.zIndex='1';
+  svg.innerHTML = '<defs><marker id="depArrowHead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="var(--text-dim)"/></marker></defs>';
+
+  state.tasks.forEach(task=>{
+    if(task.start==null) return;
+    (task.deps||[]).forEach(depId=>{
+      const dep = state.tasks.find(x=>x.id===depId);
+      if(!dep || dep.start==null) return;
+      const depBar = root.querySelector('[data-taskbar="'+dep.id+'"]');
+      const taskBar = root.querySelector('[data-taskbar="'+task.id+'"]');
+      if(!depBar || !taskBar) return;
+      const dr = depBar.getBoundingClientRect(), tr = taskBar.getBoundingClientRect();
+      const x1 = dr.right - rootRect.left, y1 = dr.top - rootRect.top + dr.height/2;
+      const x2 = tr.left - rootRect.left, y2 = tr.top - rootRect.top + tr.height/2;
+      const midX = x1 + Math.max(6, (x2-x1)/2);
+      const path = document.createElementNS(svgNS,'path');
+      path.setAttribute('d', 'M'+x1+','+y1+' L'+midX+','+y1+' L'+midX+','+y2+' L'+(x2-2)+','+y2);
+      path.setAttribute('fill','none');
+      path.setAttribute('stroke','var(--text-dim)');
+      path.setAttribute('stroke-width','1.5');
+      path.setAttribute('opacity','0.65');
+      path.setAttribute('marker-end','url(#depArrowHead)');
+      svg.appendChild(path);
+    });
+  });
+  root.appendChild(svg);
+}
+
+function renderKanban(){
+  const root = document.getElementById('kanbanRoot');
+  root.innerHTML='';
+  const cols = [
+    {key:'pending', label:t('pending')},
+    {key:'inprogress', label:t('inprogress')},
+    {key:'done', label:t('done')}
+  ];
+  cols.forEach(col=>{
+    const div = document.createElement('div');
+    div.className='kcol';
+    const items = state.tasks.filter(t=>t.status===col.key);
+    div.innerHTML = '<h3>'+col.label+' ('+items.length+')</h3>';
+    items.forEach(task=>{
+      const card = document.createElement('div');
+      card.className='kcard';
+      const res = state.resources.find(r=>r.id===task.resource);
+      const priBadge = '<span class="badge priority'+(task.priority>=4?' p-high':'')+'">P'+task.priority+'</span>';
+      const riskBadge = isAtRisk(task) ? ' <span class="badge risk">⚠ '+t('risk')+'</span>' : '';
+      card.innerHTML = '<b>'+task.name+'</b><div class="meta">'+(res?res.name:t('kAny'))+' · '+
+        (task.start!=null? dayLabelOf(task.start, task.duration) : '—')+'</div>'+
+        '<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">'+priBadge+riskBadge+'</div>';
+      card.addEventListener('click', ()=> openTaskModal(task.id));
+      div.appendChild(card);
+    });
+    root.appendChild(div);
+  });
+}
+
+function resourceLoadPct(res){
+  const slots = totalSlots();
+  const workingSlots = [...Array(slots).keys()].filter(d=> !(state.skipWeekend && isWeekendSlot(d)));
+  let occupiedUnits = 0;
+  state.tasks.filter(tk=>tk.resource===res.id && tk.start!=null).forEach(tk=>{
+    const durSlots = slotsOfHours(tk.duration);
+    for(let d=tk.start; d<tk.start+durSlots; d++){
+      if(d>=0 && d<slots && workingSlots.includes(d)) occupiedUnits++;
+    }
+  });
+  const capacityUnits = workingSlots.length * res.capacity;
+  return capacityUnits>0 ? Math.round(occupiedUnits/capacityUnits*100) : 0;
+}
+function loadBarHTML(label, pct){
+  const fillClass = pct>100?'over':(pct>=80?'high':'');
+  return '<div>'+label+'</div>'+
+    '<div class="load-bar-bg"><div class="load-bar-fill '+fillClass+'" style="width:'+Math.min(pct,100)+'%"></div></div>'+
+    '<div>'+pct+'%</div>';
+}
+function renderLoad(){
+  document.getElementById('horizonSpan').textContent = state.horizon;
+  const root = document.getElementById('loadRoot');
+  root.innerHTML='';
+  state.resources.forEach(res=>{
+    const row = document.createElement('div');
+    row.className='load-row';
+    row.innerHTML = loadBarHTML(res.name, resourceLoadPct(res));
+    root.appendChild(row);
+  });
+}
+
+function renderOverview(){
+  const total = state.tasks.length;
+  const pending = state.tasks.filter(tk=>tk.status==='pending').length;
+  const inprog = state.tasks.filter(tk=>tk.status==='inprogress').length;
+  const done = state.tasks.filter(tk=>tk.status==='done').length;
+  const atRisk = state.tasks.filter(isAtRisk);
+  const overloaded = state.resources.filter(r=> resourceLoadPct(r) > 100);
+
+  const stats = [
+    {n: total, l: t('statTotal')},
+    {n: pending, l: t('pending')},
+    {n: inprog, l: t('inprogress')},
+    {n: done, l: t('done')},
+    {n: atRisk.length, l: t('risk'), warn: atRisk.length>0},
+    {n: overloaded.length, l: t('statOverloaded'), warn: overloaded.length>0}
+  ];
+  document.getElementById('statGrid').innerHTML = stats.map(s=>
+    '<div class="stat-card'+(s.warn?' warn':'')+'"><div class="num">'+s.n+'</div><div class="lbl">'+s.l+'</div></div>'
+  ).join('');
+
+  const riskRoot = document.getElementById('riskListRoot');
+  const sortedRisk = atRisk.slice().sort((a,b)=> new Date(a.deadline)-new Date(b.deadline)).slice(0,6);
+  if(sortedRisk.length===0){
+    riskRoot.innerHTML = '<div class="small-note" style="padding:6px 0;">'+t('noRisk')+'</div>';
+  } else {
+    riskRoot.innerHTML = sortedRisk.map(tk=>
+      '<div class="ov-row" data-task="'+tk.id+'"><b>'+tk.name+'</b><span class="badge risk">'+tk.deadline+'</span></div>'
+    ).join('');
+    riskRoot.querySelectorAll('.ov-row').forEach(el=> el.addEventListener('click', ()=> openTaskModal(el.dataset.task)));
+  }
+
+  const hotRoot = document.getElementById('hotspotListRoot');
+  const hotspots = state.resources.map(r=> ({r, pct: resourceLoadPct(r)})).sort((a,b)=> b.pct-a.pct).slice(0,6);
+  if(hotspots.length===0){
+    hotRoot.innerHTML = '';
+  } else {
+    hotRoot.innerHTML = hotspots.map(({r,pct})=> '<div class="load-row">'+loadBarHTML(r.name, pct)+'</div>').join('');
+  }
+
+  const upNextRoot = document.getElementById('upNextRoot');
+  const nowFrac = todaySlotFraction();
+  let upNext = [];
+  if(nowFrac!=null){
+    const nowSlot = Math.floor(nowFrac);
+    upNext = state.tasks.filter(tk=> tk.start!=null && tk.start>=nowSlot && tk.start<=nowSlot+6 && tk.status!=='done')
+      .sort((a,b)=> a.start-b.start).slice(0,6);
+  }
+  if(upNext.length===0){
+    upNextRoot.innerHTML = '<div class="small-note" style="padding:6px 0;">'+t('noUpNext')+'</div>';
+  } else {
+    upNextRoot.innerHTML = upNext.map(tk=>
+      '<div class="ov-row" data-task="'+tk.id+'"><b>'+tk.name+'</b><span class="ov-meta">'+slotLabel(tk.start)+' · '+resNameOf(tk.resource)+'</span></div>'
+    ).join('');
+    upNextRoot.querySelectorAll('.ov-row').forEach(el=> el.addEventListener('click', ()=> openTaskModal(el.dataset.task)));
+  }
+}
+
+function duplicateTask(id){
+  const src = state.tasks.find(x=>x.id===id);
+  if(!src) return;
+  const copy = Object.assign({}, src, {
+    id: 't_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    name: src.name+' ('+t('copySuffix')+')',
+    deps: [...(src.deps||[])],
+    locked:false, start:null, status:'pending', progress:0
+  });
+  state.tasks.push(copy);
+  saveState(); render();
+}
+function deleteTaskById(id){
+  if(!confirm(t('confirmDelTask'))) return false;
+  state.tasks = state.tasks.filter(x=>x.id!==id);
+  state.tasks.forEach(x=> x.deps = x.deps.filter(d=>d!==id));
+  saveState(); render();
+  return true;
+}
+
+function renderTaskList(){
+  const root = document.getElementById('taskListRoot');
+  root.innerHTML='';
+
+  const resFilterSel = document.getElementById('taskResourceFilter');
+  resFilterSel.innerHTML = '<option value="all">'+t('filterAll')+'</option>'+
+    '<option value="unassigned">'+t('kAny')+'</option>'+
+    state.resources.map(r=>'<option value="'+r.id+'">'+r.name+'</option>').join('');
+  resFilterSel.value = taskFilter.resource;
+  if(resFilterSel.selectedIndex===-1){ taskFilter.resource='all'; resFilterSel.value='all'; }
+  document.getElementById('taskStatusFilter').value = taskFilter.status;
+  document.getElementById('taskSortSelect').value = taskFilter.sort;
+
+  const search = taskFilter.search.trim().toLowerCase();
+  let list = state.tasks.filter(tk=>{
+    if(search && !tk.name.toLowerCase().includes(search)) return false;
+    if(taskFilter.status!=='all' && tk.status!==taskFilter.status) return false;
+    if(taskFilter.resource==='unassigned'){ if(tk.resource) return false; }
+    else if(taskFilter.resource!=='all' && tk.resource!==taskFilter.resource) return false;
+    return true;
+  });
+
+  const sorters = {
+    priority: (a,b)=> b.priority-a.priority || a.name.localeCompare(b.name),
+    deadline: (a,b)=> (a.deadline? new Date(a.deadline).getTime():Infinity) - (b.deadline? new Date(b.deadline).getTime():Infinity),
+    start: (a,b)=> (a.start??Infinity) - (b.start??Infinity),
+    name: (a,b)=> a.name.localeCompare(b.name)
+  };
+  list = list.slice().sort(sorters[taskFilter.sort] || sorters.priority);
+
+  if(list.length===0){
+    root.innerHTML = '<div class="small-note" style="padding:8px 4px;">'+t('noTasksMatch')+'</div>';
+    return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'edit-table-wrap';
+  const table = document.createElement('div');
+  table.className = 'edit-table task-table';
+
+  const head = document.createElement('div');
+  head.className = 'et-row et-head';
+  head.innerHTML = ['thName','thDuration','thPriority','thResource','thDeadline','thStatus','thProgress','thLocked','']
+    .map(k=> '<div>'+(k?t(k):'')+'</div>').join('');
+  table.appendChild(head);
+
+  list.forEach(tk=>{
+    const row = document.createElement('div');
+    row.className = 'et-row';
+    row.dataset.task = tk.id;
+
+    const nameInput = document.createElement('input');
+    nameInput.type='text'; nameInput.value=tk.name;
+    nameInput.addEventListener('change', e=>{ tk.name = e.target.value.trim()||'Untitled'; saveState(); render(); });
+
+    const durInput = document.createElement('input');
+    durInput.type='number'; durInput.min=1; durInput.value=tk.duration;
+    durInput.addEventListener('change', e=>{ tk.duration = Math.max(1, parseInt(e.target.value,10)||1); saveState(); render(); });
+
+    const priInput = document.createElement('input');
+    priInput.type='number'; priInput.min=1; priInput.max=5; priInput.value=tk.priority;
+    priInput.addEventListener('change', e=>{ tk.priority = Math.min(5,Math.max(1, parseInt(e.target.value,10)||3)); saveState(); render(); });
+
+    const resSel = document.createElement('select');
+    resSel.innerHTML = '<option value="">'+t('kAny')+'</option>'+state.resources.map(r=>'<option value="'+r.id+'">'+r.name+'</option>').join('');
+    resSel.value = tk.resource||'';
+    resSel.addEventListener('change', e=>{ tk.resource = e.target.value; saveState(); render(); });
+
+    const ddlInput = document.createElement('input');
+    ddlInput.type='date'; ddlInput.value=tk.deadline||'';
+    ddlInput.addEventListener('change', e=>{ tk.deadline = e.target.value; saveState(); render(); });
+
+    const stSel = document.createElement('select');
+    ['pending','inprogress','done'].forEach(s=>{
+      const o = document.createElement('option'); o.value=s; o.textContent = STR[lang][s]; stSel.appendChild(o);
+    });
+    stSel.value = tk.status;
+    stSel.addEventListener('change', e=>{ tk.status = e.target.value; saveState(); render(); });
+
+    const prgInput = document.createElement('input');
+    prgInput.type='number'; prgInput.min=0; prgInput.max=100; prgInput.value=tk.progress;
+    prgInput.addEventListener('change', e=>{ tk.progress = Math.min(100,Math.max(0, parseInt(e.target.value,10)||0)); saveState(); render(); });
+
+    const lockBtn = document.createElement('button');
+    lockBtn.className='icon ghost';
+    lockBtn.title = tk.locked? t('unlockAction') : t('lockAction');
+    lockBtn.textContent = tk.locked? '🔓':'📌';
+    lockBtn.addEventListener('click', ()=>{ tk.locked=!tk.locked; saveState(); render(); });
+
+    const actions = document.createElement('div');
+    actions.className = 'et-actions';
+    const editBtn = document.createElement('button');
+    editBtn.className='icon ghost'; editBtn.title=t('editTask'); editBtn.textContent='✎';
+    editBtn.addEventListener('click', ()=> openTaskModal(tk.id));
+    const dupBtn = document.createElement('button');
+    dupBtn.className='icon ghost'; dupBtn.title=t('duplicateAction'); dupBtn.textContent='⧉';
+    dupBtn.addEventListener('click', ()=> duplicateTask(tk.id));
+    const delBtn = document.createElement('button');
+    delBtn.className='icon ghost danger'; delBtn.title=t('delete'); delBtn.textContent='🗑';
+    delBtn.addEventListener('click', ()=> deleteTaskById(tk.id));
+    actions.append(editBtn, dupBtn, delBtn);
+
+    [nameInput, durInput, priInput, resSel, ddlInput, stSel, prgInput, lockBtn, actions].forEach(cell=>{
+      const wrapCell = document.createElement('div');
+      wrapCell.appendChild(cell);
+      row.appendChild(wrapCell);
+    });
+    table.appendChild(row);
+  });
+
+  wrap.appendChild(table);
+  root.appendChild(wrap);
+}
+
+function renderResList(){
+  const root = document.getElementById('resListRoot');
+  root.innerHTML='';
+
+  if(state.resources.length===0){
+    root.innerHTML = '<div class="small-note" style="padding:8px 4px;">'+t('noResources')+'</div>';
+    return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'edit-table-wrap';
+  const table = document.createElement('div');
+  table.className = 'edit-table res-table';
+
+  const head = document.createElement('div');
+  head.className = 'et-row et-head';
+  head.innerHTML = ['thName','thCapacity','thSetup','']
+    .map(k=> '<div>'+(k?t(k):'')+'</div>').join('');
+  table.appendChild(head);
+
+  state.resources.forEach(r=>{
+    const row = document.createElement('div');
+    row.className = 'et-row';
+
+    const nameInput = document.createElement('input');
+    nameInput.type='text'; nameInput.value=r.name;
+    nameInput.addEventListener('change', e=>{ r.name = e.target.value.trim()||'Untitled'; saveState(); render(); });
+
+    const capInput = document.createElement('input');
+    capInput.type='number'; capInput.min=1; capInput.value=r.capacity;
+    capInput.addEventListener('change', e=>{ r.capacity = Math.max(1, parseInt(e.target.value,10)||1); saveState(); render(); });
+
+    const setupInput = document.createElement('input');
+    setupInput.type='number'; setupInput.min=0; setupInput.value=r.setupTime||0;
+    setupInput.addEventListener('change', e=>{ r.setupTime = Math.max(0, parseInt(e.target.value,10)||0); saveState(); render(); });
+
+    const actions = document.createElement('div');
+    actions.className = 'et-actions';
+    const delBtn = document.createElement('button');
+    delBtn.className='icon ghost danger'; delBtn.title=t('delete'); delBtn.textContent='🗑';
+    delBtn.addEventListener('click', ()=>{
+      if(!confirm(t('confirmDelRes'))) return;
+      state.resources = state.resources.filter(x=>x.id!==r.id);
+      state.tasks.forEach(x=>{ if(x.resource===r.id) x.resource=''; });
+      saveState(); render();
+    });
+    actions.appendChild(delBtn);
+
+    [nameInput, capInput, setupInput, actions].forEach(cell=>{
+      const wrapCell = document.createElement('div');
+      wrapCell.appendChild(cell);
+      row.appendChild(wrapCell);
+    });
+    table.appendChild(row);
+  });
+
+  wrap.appendChild(table);
+  root.appendChild(wrap);
+}
+
+function render(){
+  document.getElementById('horizonInput').value = state.horizon;
+  document.getElementById('skipWeekend').checked = state.skipWeekend;
+  renderGantt();
+  renderKanban();
+  renderLoad();
+  renderTaskList();
+  renderResList();
+  renderOverview();
+}
+
+/* ---------------- modals ---------------- */
+let editingTaskId = null, editingResId = null;
+
+function openTaskModal(id){
+  editingTaskId = id;
+  const task = id ? state.tasks.find(x=>x.id===id) : {name:'',duration:8,priority:3,resource:'',deps:[],deadline:'',status:'pending',progress:0,locked:false};
+  document.getElementById('taskModalTitle').textContent = task.name ? t('editTask') : t('addTask');
+  document.getElementById('f_name').value = task.name;
+  document.getElementById('f_duration').value = task.duration;
+  document.getElementById('f_priority').value = task.priority;
+  document.getElementById('f_deadline').value = task.deadline||'';
+  document.getElementById('f_status').value = task.status;
+  document.getElementById('f_progress').value = task.progress;
+  document.getElementById('f_locked').checked = !!task.locked;
+
+  const resSel = document.getElementById('f_resource');
+  resSel.innerHTML = '<option value="">'+t('kAny')+'</option>'+state.resources.map(r=>'<option value="'+r.id+'">'+r.name+'</option>').join('');
+  resSel.value = task.resource||'';
+
+  const depSel = document.getElementById('f_deps');
+  depSel.innerHTML = state.tasks.filter(x=>x.id!==id).map(x=>'<option value="'+x.id+'">'+x.name+'</option>').join('');
+  [...depSel.options].forEach(o=> o.selected = (task.deps||[]).includes(o.value));
+
+  document.getElementById('deleteTaskBtn').style.display = id ? 'inline-block':'none';
+  document.getElementById('taskModal').classList.add('show');
+}
+function closeTaskModal(){ document.getElementById('taskModal').classList.remove('show'); editingTaskId=null; }
+
+function openResModal(id){
+  editingResId = id;
+  const r = id ? state.resources.find(x=>x.id===id) : {name:'',capacity:1,setupTime:0};
+  document.getElementById('r_name').value = r.name;
+  document.getElementById('r_capacity').value = r.capacity;
+  document.getElementById('r_setup').value = r.setupTime||0;
+  document.getElementById('deleteResBtn').style.display = id ? 'inline-block':'none';
+  document.getElementById('resModal').classList.add('show');
+}
+function closeResModal(){ document.getElementById('resModal').classList.remove('show'); editingResId=null; }
+
+document.getElementById('addTaskBtn').addEventListener('click', ()=> openTaskModal(null));
+document.getElementById('addResBtn').addEventListener('click', ()=> openResModal(null));
+document.getElementById('cancelTaskBtn').addEventListener('click', closeTaskModal);
+document.getElementById('cancelResBtn').addEventListener('click', closeResModal);
+
+document.getElementById('saveTaskBtn').addEventListener('click', ()=>{
+  const deps = [...document.getElementById('f_deps').selectedOptions].map(o=>o.value);
+  const data = {
+    name: document.getElementById('f_name').value.trim() || 'Untitled',
+    duration: Math.max(1, parseInt(document.getElementById('f_duration').value,10)||1),
+    priority: Math.min(5,Math.max(1, parseInt(document.getElementById('f_priority').value,10)||3)),
+    resource: document.getElementById('f_resource').value,
+    deps, deadline: document.getElementById('f_deadline').value,
+    status: document.getElementById('f_status').value,
+    progress: Math.min(100,Math.max(0, parseInt(document.getElementById('f_progress').value,10)||0)),
+    locked: document.getElementById('f_locked').checked
+  };
+  if(editingTaskId){
+    const t = state.tasks.find(x=>x.id===editingTaskId);
+    Object.assign(t, data);
+  } else {
+    const id = 't_'+Date.now();
+    state.tasks.push(Object.assign({id, start:null}, data));
+  }
+  saveState(); closeTaskModal(); render();
+});
+document.getElementById('deleteTaskBtn').addEventListener('click', ()=>{
+  if(!editingTaskId) return;
+  if(deleteTaskById(editingTaskId)) closeTaskModal();
+});
+
+document.getElementById('saveResBtn').addEventListener('click', ()=>{
+  const data = {
+    name: document.getElementById('r_name').value.trim() || 'Untitled',
+    capacity: Math.max(1, parseInt(document.getElementById('r_capacity').value,10)||1),
+    setupTime: Math.max(0, parseInt(document.getElementById('r_setup').value,10)||0)
+  };
+  if(editingResId){
+    Object.assign(state.resources.find(x=>x.id===editingResId), data);
+  } else {
+    state.resources.push(Object.assign({id:'r_'+Date.now()}, data));
+  }
+  saveState(); closeResModal(); render();
+});
+document.getElementById('deleteResBtn').addEventListener('click', ()=>{
+  if(!editingResId) return;
+  if(!confirm(t('confirmDelRes'))) return;
+  state.resources = state.resources.filter(x=>x.id!==editingResId);
+  state.tasks.forEach(x=>{ if(x.resource===editingResId) x.resource=''; });
+  saveState(); closeResModal(); render();
+});
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('.tab').forEach((tab,i)=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('view-'+tab.dataset.view).classList.add('active');
+  });
+});
+
+function fillHelp(){
+  document.getElementById('helpTitle').textContent = HELP[lang].title;
+  document.getElementById('helpBody').innerHTML = HELP[lang].body;
+  document.getElementById('closeHelpBtn').textContent = HELP[lang].close;
+}
+
+document.getElementById('helpBtn').addEventListener('click', ()=>{
+  fillHelp();
+  document.getElementById('helpModal').classList.add('show');
+});
+document.getElementById('closeHelpBtn').addEventListener('click', ()=>{
+  document.getElementById('helpModal').classList.remove('show');
+});
+document.getElementById('helpModal').addEventListener('click', (e)=>{
+  if(e.target.id==='helpModal') document.getElementById('helpModal').classList.remove('show');
+});
+
+document.getElementById('expandGanttBtn').addEventListener('click', ()=>{
+  document.getElementById('ganttZoomHost').appendChild(document.getElementById('ganttPane'));
+  document.getElementById('ganttZoomModal').classList.add('show');
+});
+function closeGanttZoom(){
+  document.getElementById('view-gantt').appendChild(document.getElementById('ganttPane'));
+  document.getElementById('ganttZoomModal').classList.remove('show');
+}
+document.getElementById('closeGanttZoomBtn').addEventListener('click', closeGanttZoom);
+document.getElementById('ganttZoomModal').addEventListener('click', (e)=>{
+  if(e.target.id==='ganttZoomModal') closeGanttZoom();
+});
+
+/* ---------------- top controls ---------------- */
+document.getElementById('autoScheduleBtn').addEventListener('click', runAutoScheduleWithDiff);
+document.getElementById('closeDiffBtn').addEventListener('click', ()=>{
+  document.getElementById('diffModal').classList.remove('show');
+});
+document.getElementById('diffModal').addEventListener('click', (e)=>{
+  if(e.target.id==='diffModal') document.getElementById('diffModal').classList.remove('show');
+});
+document.getElementById('showCritical').addEventListener('change', (e)=>{
+  showCritical = e.target.checked;
+  renderGantt();
+});
+document.getElementById('showDeps').addEventListener('change', (e)=>{
+  showDeps = e.target.checked;
+  renderGantt();
+});
+document.getElementById('jumpTodayBtn').addEventListener('click', ()=>{
+  const frac = todaySlotFraction();
+  if(frac==null){ alert(t('todayOutside')); return; }
+  const scrollEl = document.querySelector('.gantt-scroll');
+  const targetLeft = 150 + frac*shiftWidth();
+  scrollEl.scrollLeft = Math.max(0, targetLeft - scrollEl.clientWidth/2);
+});
+document.getElementById('zoomOutBtn').addEventListener('click', ()=>{
+  zoomIdx = Math.max(0, zoomIdx-1);
+  storage.set('dsched_zoom', ZOOM_LEVELS[zoomIdx]);
+  updateZoomLabel(); renderGantt();
+});
+document.getElementById('zoomInBtn').addEventListener('click', ()=>{
+  zoomIdx = Math.min(ZOOM_LEVELS.length-1, zoomIdx+1);
+  storage.set('dsched_zoom', ZOOM_LEVELS[zoomIdx]);
+  updateZoomLabel(); renderGantt();
+});
+document.getElementById('taskSearchInput').addEventListener('input', (e)=>{
+  taskFilter.search = e.target.value; renderTaskList();
+});
+document.getElementById('taskStatusFilter').addEventListener('change', (e)=>{
+  taskFilter.status = e.target.value; renderTaskList();
+});
+document.getElementById('taskResourceFilter').addEventListener('change', (e)=>{
+  taskFilter.resource = e.target.value; renderTaskList();
+});
+document.getElementById('taskSortSelect').addEventListener('change', (e)=>{
+  taskFilter.sort = e.target.value; renderTaskList();
+});
+document.getElementById('langBtn').addEventListener('click', ()=>{
+  lang = lang==='zh' ? 'en' : 'zh';
+  storage.set('dsched_lang', lang);
+  applyLanguage();
+});
+document.getElementById('themeBtn').addEventListener('click', ()=>{
+  const cur = document.body.getAttribute('data-theme');
+  const next = cur==='dark' ? 'light':'dark';
+  document.body.setAttribute('data-theme', next);
+  storage.set('dsched_theme', next);
+  document.getElementById('themeBtn').textContent = next==='dark' ? '🌙':'☀️';
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  state = defaultState();
+  saveState(); render();
+});
+document.getElementById('resetTestersBtn').addEventListener('click', ()=>{
+  state = testerPoolState();
+  saveState(); render();
+});
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  if(document.getElementById('exportFormatSel').value === 'csv'){ exportTasksCSV(); return; }
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'dynamic-scheduler-data.json';
+  a.click();
+});
+document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const isCSV = /\.csv$/i.test(file.name) || file.type==='text/csv';
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    if(isCSV){ importTasksCSV(reader.result); return; }
+    try{
+      const data = JSON.parse(reader.result);
+      if(data && data.tasks && data.resources){ state = data; saveState(); render(); }
+      else { alert('Invalid JSON'); }
+    }catch(err){ alert('Invalid JSON'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+document.getElementById('horizonInput').addEventListener('change', (e)=>{
+  state.horizon = Math.min(90,Math.max(7, parseInt(e.target.value,10)||24));
+  saveState(); render();
+});
+document.getElementById('skipWeekend').addEventListener('change', (e)=>{
+  state.skipWeekend = e.target.checked;
+  saveState(); render();
+});
+
+/* ---------------- CSV import/export ---------------- */
+function parseCSVLine(line){
+  const out = []; let cur=''; let inQuotes=false;
+  for(let i=0; i<line.length; i++){
+    const c = line[i];
+    if(inQuotes){
+      if(c==='"'){
+        if(line[i+1]==='"'){ cur+='"'; i++; } else { inQuotes=false; }
+      } else cur+=c;
+    } else if(c==='"'){
+      inQuotes=true;
+    } else if(c===','){
+      out.push(cur); cur='';
+    } else cur+=c;
+  }
+  out.push(cur);
+  return out;
+}
+function csvEscape(field){
+  const s = field==null ? '' : String(field);
+  return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+}
+function parseCSV(text){
+  text = text.replace(/^﻿/, '');
+  const lines = text.split(/\r?\n/).filter(l=> l.trim().length>0);
+  if(lines.length<2) return [];
+  const headers = parseCSVLine(lines[0]).map(h=>h.trim());
+  return lines.slice(1).map(line=>{
+    const cells = parseCSVLine(line).map(c=>c.trim());
+    const row = {};
+    headers.forEach((h,i)=> row[h] = cells[i]!==undefined ? cells[i] : '');
+    return row;
+  });
+}
+function exportTasksCSV(){
+  const idToName = {}; state.tasks.forEach(tk=> idToName[tk.id]=tk.name);
+  const header = ['name','duration','priority','resource','deps','deadline','status','progress'];
+  const lines = [header.join(',')];
+  state.tasks.forEach(tk=>{
+    const res = state.resources.find(r=>r.id===tk.resource);
+    const depNames = (tk.deps||[]).map(id=> idToName[id]).filter(Boolean).join('|');
+    lines.push([tk.name, tk.duration, tk.priority, res?res.name:'', depNames, tk.deadline||'', tk.status, tk.progress].map(csvEscape).join(','));
+  });
+  const blob = new Blob(['﻿'+lines.join('\n')+'\n'], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tasks-export.csv';
+  a.click();
+}
+
+function importTasksCSV(text){
+  const rows = parseCSV(text);
+  if(rows.length===0){ alert('Empty CSV'); return; }
+
+  const nameToId = {};
+  state.tasks.forEach(tk=> nameToId[tk.name] = tk.id);
+
+  let addedCount = 0, updatedCount = 0, addedResCount = 0;
+  const pending = []; // {id, depNames} — dependency names resolved in a second pass
+
+  rows.forEach(row=>{
+    const rowName = row.name || 'Untitled';
+
+    let resId = '';
+    const rowResName = (row.resource||'').trim();
+    if(rowResName){
+      let resMatch = state.resources.find(r=> r.name.toLowerCase() === rowResName.toLowerCase());
+      if(!resMatch){
+        resMatch = { id:'r_'+Date.now()+'_'+Math.random().toString(36).slice(2,5), name: rowResName, capacity:1, setupTime:0 };
+        state.resources.push(resMatch);
+        addedResCount++;
+      }
+      resId = resMatch.id;
+    }
+
+    const fields = {
+      name: rowName,
+      duration: Math.max(1, parseInt(row.duration,10)||1),
+      priority: Math.min(5,Math.max(1, parseInt(row.priority,10)||3)),
+      resource: resId,
+      deadline: row.deadline || '',
+      status: ['pending','inprogress','done'].includes(row.status) ? row.status : 'pending',
+      progress: Math.min(100,Math.max(0, parseInt(row.progress,10)||0))
+    };
+    const depNames = (row.deps||'').split('|').map(s=>s.trim()).filter(Boolean);
+
+    const existingId = nameToId[rowName];
+    if(existingId){
+      Object.assign(state.tasks.find(x=>x.id===existingId), fields);
+      updatedCount++;
+      pending.push({id: existingId, depNames});
+    } else {
+      const id = 'csv_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+      state.tasks.push(Object.assign({id, deps:[], locked:false, start:null}, fields));
+      nameToId[rowName] = id;
+      addedCount++;
+      pending.push({id, depNames});
+    }
+  });
+
+  let unresolved = 0;
+  pending.forEach(({id, depNames})=>{
+    const task = state.tasks.find(x=>x.id===id);
+    task.deps = depNames.map(n=> nameToId[n]).filter(depId=>{
+      if(depId===undefined){ unresolved++; return false; }
+      return true;
+    });
+  });
+
+  saveState(); render();
+  let msg = t('csvImportedPrefix')+addedCount+t('csvImportedSuffix');
+  if(updatedCount>0) msg += t('csvUpdatedPrefix')+updatedCount+t('csvUpdatedSuffix');
+  if(addedResCount>0) msg += t('csvNewResourcePrefix')+addedResCount+t('csvNewResourceSuffix');
+  msg += lang==='zh' ? '。' : '.';
+  if(unresolved>0) msg += ' ' + unresolved + t('csvUnresolvedSuffix');
+  alert(msg);
+}
+document.getElementById('csvTemplateBtn').addEventListener('click', ()=>{
+  const csv = 'name,duration,priority,resource,deps,deadline,status,progress\n'+
+    'Lot E - Photo Litho,16,4,,,,pending,0\n'+
+    'Lot E - Etch,16,3,,Lot E - Photo Litho,,pending,0\n';
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tasks-template.csv';
+  a.click();
+});
+
+/* ---------------- init ---------------- */
+state = loadState();
+const savedTheme = storage.get('dsched_theme');
+if(savedTheme){ document.body.setAttribute('data-theme', savedTheme); document.getElementById('themeBtn').textContent = savedTheme==='dark'?'🌙':'☀️'; }
+updateZoomLabel();
+applyLanguage();
+
+})();
+</script>
+</body>
+</html>
