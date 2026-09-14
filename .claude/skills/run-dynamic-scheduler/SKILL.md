@@ -10,6 +10,17 @@ Chinese / English bilingual, dark/light theme). No build step, no server,
 no `package.json` for the app itself. Everything — markup, CSS, and a
 single IIFE `<script>` — lives in that one file.
 
+### Bump `APP_VERSION`/`APP_UPDATED` on every change
+
+Near the top of the script (`const APP_VERSION = '...'; const APP_UPDATED
+= '...';`) are the values shown under the app title and in the Help (❓)
+footer. Nothing computes these automatically — there's no build step, no
+git-hash injection. Whenever you change `index.html`, bump `APP_VERSION`
+(patch for fixes/copy tweaks, minor for new features, matching what
+CHANGELOG.md's entry for the change would say) and set `APP_UPDATED` to
+the date of the change. Forgetting this means the on-page version goes
+stale relative to what's actually deployed.
+
 ## Running it
 
 Just open the file directly in a browser:

@@ -14,6 +14,8 @@ This file tracks changes to `index.html`. Loosely follows [Keep a Changelog](htt
   Undo/redo: "↶"/"↷" (or Ctrl+Z/Ctrl+Y) undoes and redoes almost every state-changing action — drag rescheduling, inline table edits, auto-schedule, add/duplicate/delete task or resource, JSON/CSV import, horizon/settings changes — up to 50 steps of history. Ctrl+Z inside a text field is left alone as the browser's native field-undo, not intercepted.
 - 甘特圖時間軸縮放新增滑鼠滾輪／觸控板手勢：在甘特圖上按住 Ctrl（Mac 為 ⌘）滾動滾輪、或用觸控板雙指縮放，會以游標所在位置為中心放大縮小（不會像單純改變縮放百分比那樣讓畫面整個跳動）；一般（未按 Ctrl）滾動仍是正常捲動，不受影響。全螢幕放大檢視內同樣適用。
   Added scroll-wheel/trackpad zoom on the Gantt chart: hold Ctrl (⌘ on Mac) and scroll, or pinch on a trackpad, to zoom centered on the cursor position (instead of just jumping to a new zoom level with no anchor); plain scrolling is untouched. Works inside the fullscreen expand view too.
+- 標題下方新增版本號與更新日期（例如「版本 v1.3.0 · 更新於 2026-09-15」），「說明」(❓) 視窗底部也會顯示；之後每次修改都會手動更新這兩個值（見 SKILL.md）。
+  Added a version number and last-updated date under the app title (e.g. "v1.3.0 · updated 2026-09-15"), also shown at the bottom of the Help (❓) dialog; both are bumped by hand on every future change (see SKILL.md).
 
 ### 變更 / Changed
 

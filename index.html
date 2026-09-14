@@ -42,6 +42,7 @@
   header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
   header h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.2px;}
   header h1 small{display:block;font-weight:400;font-size:12px;color:var(--text-dim);margin-top:2px;}
+  header h1 small#appVersion{font-size:10px;opacity:.65;margin-top:1px;}
   .hdr-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 
   button{
@@ -212,7 +213,7 @@
 <div class="app">
 
   <header>
-    <h1 id="appTitle">動態排程工具<small id="appSubtitle">任務・時程・資源・自動排程＋人工介入</small></h1>
+    <h1 id="appTitle">動態排程工具<small id="appSubtitle">任務・時程・資源・自動排程＋人工介入</small><small id="appVersion"></small></h1>
     <div class="hdr-controls">
       <button class="icon" id="helpBtn" title="Help">❓</button>
       <button class="icon" id="langBtn" title="Language">中/EN</button>
@@ -502,7 +503,8 @@ const STR = {
     lockAction:"鎖定", unlockAction:"解除鎖定", duplicateAction:"複製任務", copySuffix:"複製",
     zoomOutTitle:"縮小時間軸", zoomInTitle:"放大時間軸", zoomLabelTitle:"提示：按住 Ctrl（Mac 為 ⌘）滾動滑鼠滾輪，或用觸控板雙指縮放，即可在游標位置縮放時間軸",
     undoTitle:"復原（Ctrl+Z）", redoTitle:"重做（Ctrl+Y）",
-    expandGanttBtn:"⛶ 放大", expandGanttTitle:"全螢幕檢視甘特圖", ganttZoomTitle:"甘特圖（放大檢視）"
+    expandGanttBtn:"⛶ 放大", expandGanttTitle:"全螢幕檢視甘特圖", ganttZoomTitle:"甘特圖（放大檢視）",
+    versionLine:"版本 v{v} · 更新於 {d}"
   },
   en:{
     title:"Dynamic Scheduler", subtitle:"Tasks · Timeline · Resources · Auto-schedule + manual override",
@@ -546,9 +548,15 @@ const STR = {
     lockAction:"Lock", unlockAction:"Unlock", duplicateAction:"Duplicate task", copySuffix:"copy",
     zoomOutTitle:"Zoom out timeline", zoomInTitle:"Zoom in timeline", zoomLabelTitle:"Tip: hold Ctrl (⌘ on Mac) and scroll, or pinch on a trackpad, to zoom the timeline at your cursor position",
     undoTitle:"Undo (Ctrl+Z)", redoTitle:"Redo (Ctrl+Y)",
-    expandGanttBtn:"⛶ Expand", expandGanttTitle:"View Gantt chart fullscreen", ganttZoomTitle:"Gantt Chart (Expanded)"
+    expandGanttBtn:"⛶ Expand", expandGanttTitle:"View Gantt chart fullscreen", ganttZoomTitle:"Gantt Chart (Expanded)",
+    versionLine:"v{v} · updated {d}"
   }
 };
+/* ---------------- version ---------------- */
+/* Bump these by hand whenever index.html changes — no build step computes them automatically. */
+const APP_VERSION = '1.3.0';
+const APP_UPDATED = '2026-09-15';
+
 let lang = storage.get('dsched_lang') || 'zh';
 
 function t(key){ return STR[lang][key] ?? key; }
@@ -667,6 +675,7 @@ const HELP = {
 function applyLanguage(){
   document.getElementById('appTitle').childNodes[0].nodeValue = t('title');
   document.getElementById('appSubtitle').textContent = t('subtitle');
+  document.getElementById('appVersion').textContent = t('versionLine').replace('{v}', APP_VERSION).replace('{d}', APP_UPDATED);
   document.querySelectorAll('[data-i]').forEach(el=>{
     const k = el.getAttribute('data-i');
     if(STR[lang][k]!==undefined) el.textContent = STR[lang][k];
@@ -1636,7 +1645,9 @@ document.querySelectorAll('.tab').forEach((tab,i)=>{
 
 function fillHelp(){
   document.getElementById('helpTitle').textContent = HELP[lang].title;
-  document.getElementById('helpBody').innerHTML = HELP[lang].body;
+  document.getElementById('helpBody').innerHTML = HELP[lang].body +
+    '<p style="color:var(--text-dim);font-size:11px;margin-top:16px;">' +
+    t('versionLine').replace('{v}', APP_VERSION).replace('{d}', APP_UPDATED) + '</p>';
   document.getElementById('closeHelpBtn').textContent = HELP[lang].close;
 }
 
