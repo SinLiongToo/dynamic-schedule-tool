@@ -26,8 +26,8 @@ Data persists in the browser's localStorage (same computer, same browser). To ba
   Overview dashboard on landing: task counts, at-risk tasks, resource load hotspots, and what's starting soon.
 - **自動排程**：依前置任務、優先權、截止日自動安排時程，支援共用資源池、換線／緩衝時間、跳過週末。
   Auto-schedule by dependencies → priority → deadline, with shared resource pools, setup/changeover buffers, and optional weekend-skipping.
-- **甘特圖**：拖曳（滑鼠或觸控皆可）調整時間與資源、今天標記線＋一鍵跳至今天、相依關係箭頭、關鍵路徑標示、時間軸縮放（60%–250%）、右上角「⛶ 放大」可全螢幕檢視。
-  Gantt chart: drag (mouse or touch) to reschedule, a "today" marker with jump-to-today, dependency arrows, critical-path highlighting, zoom (60%–250%), and a fullscreen expand view.
+- **甘特圖**：拖曳（滑鼠或觸控皆可）調整時間與資源、今天標記線＋一鍵跳至今天、相依關係箭頭、關鍵路徑標示、時間軸縮放（60%–250%，按鈕或 Ctrl+滾輪／觸控板雙指縮放，會以游標位置為中心）、右上角「⛶ 放大」可全螢幕檢視。
+  Gantt chart: drag (mouse or touch) to reschedule, a "today" marker with jump-to-today, dependency arrows, critical-path highlighting, zoom (60%–250%, via buttons or Ctrl+scroll/trackpad pinch centered on the cursor), and a fullscreen expand view.
 - **看板 / 資源負載**：依狀態分欄檢視（含彩色徽章）；各資源使用率一覽。
   Kanban board by status (with colored badges); per-resource utilization view.
 - **任務／資源設定**：可直接編輯的表格——欄位改完自動存檔，不必開彈出視窗；搜尋、篩選（狀態／資源）、排序，逐列快速鎖定／複製／刪除。

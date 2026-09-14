@@ -500,7 +500,7 @@ const STR = {
     sortLbl:"排序方式", sortPriority:"優先權（高→低）", sortDeadline:"截止日（早→晚）",
     sortStart:"開始時間", sortName:"名稱", noTasksMatch:"沒有符合條件的任務。",
     lockAction:"鎖定", unlockAction:"解除鎖定", duplicateAction:"複製任務", copySuffix:"複製",
-    zoomOutTitle:"縮小時間軸", zoomInTitle:"放大時間軸",
+    zoomOutTitle:"縮小時間軸", zoomInTitle:"放大時間軸", zoomLabelTitle:"提示：按住 Ctrl（Mac 為 ⌘）滾動滑鼠滾輪，或用觸控板雙指縮放，即可在游標位置縮放時間軸",
     undoTitle:"復原（Ctrl+Z）", redoTitle:"重做（Ctrl+Y）",
     expandGanttBtn:"⛶ 放大", expandGanttTitle:"全螢幕檢視甘特圖", ganttZoomTitle:"甘特圖（放大檢視）"
   },
@@ -544,7 +544,7 @@ const STR = {
     sortLbl:"Sort by", sortPriority:"Priority (high→low)", sortDeadline:"Deadline (earliest first)",
     sortStart:"Start time", sortName:"Name", noTasksMatch:"No tasks match the current filter.",
     lockAction:"Lock", unlockAction:"Unlock", duplicateAction:"Duplicate task", copySuffix:"copy",
-    zoomOutTitle:"Zoom out timeline", zoomInTitle:"Zoom in timeline",
+    zoomOutTitle:"Zoom out timeline", zoomInTitle:"Zoom in timeline", zoomLabelTitle:"Tip: hold Ctrl (⌘ on Mac) and scroll, or pinch on a trackpad, to zoom the timeline at your cursor position",
     undoTitle:"Undo (Ctrl+Z)", redoTitle:"Redo (Ctrl+Y)",
     expandGanttBtn:"⛶ Expand", expandGanttTitle:"View Gantt chart fullscreen", ganttZoomTitle:"Gantt Chart (Expanded)"
   }
@@ -600,6 +600,7 @@ const HELP = {
       · <b>建議流程</b>：匯入／同步任務資料 → 按「▶ 自動排程」讓系統先自動排出時程 → 視現場狀況在甘特圖上手動拖曳微調（拖放後自動鎖定，不會被下一次自動排程移動），逐步把時程調到符合實際情況。<br>
       · <b>復原／重做</b>：右上角「↶」「↷」（或快捷鍵 Ctrl+Z／Ctrl+Y）可復原、重做幾乎所有操作——拖曳、表格直接編輯、自動排程、新增／刪除任務或資源、匯入等。最多可回溯 50 步；重新整理頁面會清空歷史紀錄。<br>
       · <b>今天標記線</b>：甘特圖上會有一條紅色直線標出現在的時間；按右上方「📍 今天」可自動捲動到那個位置（若今天不在目前排程視窗內會提示）。<br>
+      · <b>時間軸縮放</b>：除了「－／＋」按鈕，也可以在甘特圖上按住 Ctrl（Mac 為 ⌘）滾動滑鼠滾輪、或用觸控板雙指縮放，會以游標所在位置為中心放大/縮小，比較直覺；「⛶ 放大」則是把整個甘特圖（含所有控制項）彈出全螢幕檢視，方便看更多任務與資源。<br>
       · <b>相依關係箭頭</b>：勾選「顯示相依關係箭頭」，會在甘特圖上以箭頭連線標出任務之間的前置／後續關係，方便一眼看出誰在等誰。<br>
       · <b>任務清單搜尋／篩選／排序</b>：「任務／資源設定」頁的任務清單可依名稱搜尋、依狀態或資源篩選、依優先權／截止日／開始時間／名稱排序；每筆任務旁也有快速按鈕可直接鎖定/解鎖 📌、複製 ⧉、刪除 🗑，不必每次都開編輯視窗。</p>
 
@@ -653,6 +654,7 @@ const HELP = {
       · <b>Suggested workflow</b>: import/sync your task data → click "▶ Auto-schedule" to let the system lay out an initial timeline → drag bars on the Gantt chart to manually fine-tune for real-world conditions (a drop auto-pins the task so future auto-scheduling won't move it), refining the schedule step by step.<br>
       · <b>Undo/redo</b>: "↶"/"↷" in the top right (or Ctrl+Z/Ctrl+Y) undo and redo almost any action — dragging, inline table edits, auto-schedule, adding/deleting tasks or resources, imports. Up to 50 steps of history; reloading the page clears it.<br>
       · <b>Today marker</b>: a red vertical line on the Gantt chart shows the current date/time. Click "📍 Today" in the top right to auto-scroll to it (it warns if today falls outside the current horizon).<br>
+      · <b>Timeline zoom</b>: besides the "－/＋" buttons, hold Ctrl (⌘ on Mac) and scroll, or pinch on a trackpad, anywhere on the Gantt chart — it zooms centered on your cursor, which feels more natural. "⛶ Expand" pops the whole Gantt chart (controls included) into a fullscreen view for seeing more tasks and resources at once.<br>
       · <b>Dependency arrows</b>: check "Show dependency arrows" to draw connector lines between tasks on the Gantt chart, so you can see at a glance which task is waiting on which.<br>
       · <b>Task list search / filter / sort</b>: on the Tasks/Resources tab, search tasks by name, filter by status or resource, and sort by priority / deadline / start time / name. Each row also has quick buttons to lock/unlock 📌, duplicate ⧉, or delete 🗑 without opening the edit dialog.</p>
 
@@ -680,6 +682,7 @@ function applyLanguage(){
   document.getElementById('taskSearchInput').placeholder = t('searchPlaceholder');
   document.getElementById('zoomOutBtn').title = t('zoomOutTitle');
   document.getElementById('zoomInBtn').title = t('zoomInTitle');
+  document.getElementById('zoomLabel').title = t('zoomLabelTitle');
   document.getElementById('expandGanttBtn').title = t('expandGanttTitle');
   document.getElementById('undoBtn').title = t('undoTitle');
   document.getElementById('redoBtn').title = t('redoTitle');
@@ -705,6 +708,21 @@ let zoomIdx = (function(){
 })();
 function shiftWidth(){ return BASE_SHIFT_WIDTH * ZOOM_LEVELS[zoomIdx]; }
 function updateZoomLabel(){ document.getElementById('zoomLabel').textContent = Math.round(ZOOM_LEVELS[zoomIdx]*100)+'%'; }
+function zoomTo(newIdx, anchorClientX){
+  newIdx = Math.max(0, Math.min(ZOOM_LEVELS.length-1, newIdx));
+  if(newIdx===zoomIdx) return;
+  const scrollEl = document.querySelector('.gantt-scroll');
+  const rect = scrollEl.getBoundingClientRect();
+  const cx = anchorClientX!=null ? anchorClientX : (rect.left + rect.width/2);
+  const oldWidth = shiftWidth();
+  const anchorContentX = scrollEl.scrollLeft + (cx - rect.left);
+  zoomIdx = newIdx;
+  storage.set('dsched_zoom', ZOOM_LEVELS[zoomIdx]);
+  updateZoomLabel();
+  renderGantt();
+  const ratio = shiftWidth() / oldWidth;
+  scrollEl.scrollLeft = anchorContentX*ratio - (cx - rect.left);
+}
 
 function defaultState(){
   const today = new Date(); today.setHours(0,0,0,0);
@@ -1679,16 +1697,13 @@ document.getElementById('jumpTodayBtn').addEventListener('click', ()=>{
   const targetLeft = 150 + frac*shiftWidth();
   scrollEl.scrollLeft = Math.max(0, targetLeft - scrollEl.clientWidth/2);
 });
-document.getElementById('zoomOutBtn').addEventListener('click', ()=>{
-  zoomIdx = Math.max(0, zoomIdx-1);
-  storage.set('dsched_zoom', ZOOM_LEVELS[zoomIdx]);
-  updateZoomLabel(); renderGantt();
-});
-document.getElementById('zoomInBtn').addEventListener('click', ()=>{
-  zoomIdx = Math.min(ZOOM_LEVELS.length-1, zoomIdx+1);
-  storage.set('dsched_zoom', ZOOM_LEVELS[zoomIdx]);
-  updateZoomLabel(); renderGantt();
-});
+document.getElementById('zoomOutBtn').addEventListener('click', ()=> zoomTo(zoomIdx-1));
+document.getElementById('zoomInBtn').addEventListener('click', ()=> zoomTo(zoomIdx+1));
+document.querySelector('.gantt-scroll').addEventListener('wheel', (e)=>{
+  if(!(e.ctrlKey || e.metaKey)) return;
+  e.preventDefault();
+  zoomTo(zoomIdx + (e.deltaY<0 ? 1 : -1), e.clientX);
+}, {passive:false});
 document.getElementById('taskSearchInput').addEventListener('input', (e)=>{
   taskFilter.search = e.target.value; renderTaskList();
 });

@@ -12,6 +12,8 @@ This file tracks changes to `index.html`. Loosely follows [Keep a Changelog](htt
   Published the project to GitHub Pages: https://sinliongtoo.github.io/dynamic-schedule-tool/ (public repo `SinLiongToo/dynamic-schedule-tool`). Renamed the main file from `dynamic-scheduler (2).html` to `index.html` so the URL loads without needing to encode spaces/parentheses.
 - 復原／重做：右上角「↶」「↷」（或 Ctrl+Z／Ctrl+Y）可復原、重做幾乎所有會改變資料的操作——拖曳排程、表格直接編輯、自動排程、新增／複製／刪除任務或資源、匯入 JSON／CSV、修改排程視窗設定等，最多可回溯 50 步。在文字輸入框內按 Ctrl+Z 仍是瀏覽器原生的欄位復原，不會被攔截。
   Undo/redo: "↶"/"↷" (or Ctrl+Z/Ctrl+Y) undoes and redoes almost every state-changing action — drag rescheduling, inline table edits, auto-schedule, add/duplicate/delete task or resource, JSON/CSV import, horizon/settings changes — up to 50 steps of history. Ctrl+Z inside a text field is left alone as the browser's native field-undo, not intercepted.
+- 甘特圖時間軸縮放新增滑鼠滾輪／觸控板手勢：在甘特圖上按住 Ctrl（Mac 為 ⌘）滾動滾輪、或用觸控板雙指縮放，會以游標所在位置為中心放大縮小（不會像單純改變縮放百分比那樣讓畫面整個跳動）；一般（未按 Ctrl）滾動仍是正常捲動，不受影響。全螢幕放大檢視內同樣適用。
+  Added scroll-wheel/trackpad zoom on the Gantt chart: hold Ctrl (⌘ on Mac) and scroll, or pinch on a trackpad, to zoom centered on the cursor position (instead of just jumping to a new zoom level with no anchor); plain scrolling is untouched. Works inside the fullscreen expand view too.
 
 ### 變更 / Changed
 
