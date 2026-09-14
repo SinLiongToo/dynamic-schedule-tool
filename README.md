@@ -4,6 +4,8 @@
 
 A single-file HTML prototype for dynamic scheduling: enter tasks, resources, and current status, and a deterministic rule-based algorithm (not AI) lays out a timeline. Re-run it whenever things change, or override the result by dragging. Bilingual (Traditional Chinese / English) UI, dark/light theme.
 
+**線上試用 / Live demo:** https://sinliongtoo.github.io/dynamic-schedule-tool/
+
 ## 執行方式 / Running it
 
 不需要安裝、不需要伺服器——直接用瀏覽器開啟這個檔案即可：
@@ -34,6 +36,8 @@ Data persists in the browser's localStorage (same computer, same browser). To ba
   Import/Export: pick JSON (full backup, import replaces current data) or CSV (task list only, import syncs by task name and auto-creates unrecognized resources).
 - **排程異動比較**：每次自動排程後跳出視窗列出哪些任務被搬動。
   A diff dialog after every auto-schedule run shows what moved.
+- **復原／重做**：右上角「↶」「↷」或 Ctrl+Z／Ctrl+Y，可復原、重做幾乎所有操作（拖曳、表格編輯、自動排程、新增／刪除、匯入等），最多 50 步。
+  Undo/redo: "↶"/"↷" or Ctrl+Z/Ctrl+Y undoes and redoes almost any action (dragging, table edits, auto-schedule, add/delete, imports), up to 50 steps.
 
 完整使用說明請點應用程式右上角「❓」。
 

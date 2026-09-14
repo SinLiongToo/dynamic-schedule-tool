@@ -104,6 +104,23 @@ with Playwright, `.fill()` alone won't commit the value — you need to
 also fire blur (`el.evaluate(e => e.blur())` or `press('Tab')`) or the
 `change` handler never runs and `localStorage` won't reflect the edit.
 
+### Every state mutation must call `pushUndo()` first, or undo silently misses it
+
+Undo/redo (`pushUndo`/`undo`/`redo`, near `saveState`) works by
+snapshotting `JSON.stringify(state)` onto `undoStack` — there's no
+mutation-observer or Proxy watching `state`, so it only knows about a
+change if the handler explicitly calls `pushUndo()` as the *first*
+line, before touching `state.tasks`/`state.resources`/anything else.
+Every existing mutation site (inline table edits, drag-and-drop, the
+task/resource modals, duplicate/delete, auto-schedule, CSV/JSON import,
+horizon/skipWeekend changes, both sample-data reset buttons) already
+does this — if you add a new way to change `state`, add `pushUndo()`
+too, or that action will be silently un-undoable while everything
+around it works fine. The global `Ctrl+Z`/`Ctrl+Y` keydown handler
+skips this if `document.activeElement` is an `INPUT`/`TEXTAREA`/`SELECT`,
+so it doesn't fight the browser's native undo while typing — keep that
+guard if you touch the handler.
+
 ### Gotcha: exports use `<a download>` + Blob, not navigation
 
 Both JSON and CSV export do `URL.createObjectURL(blob)` + a synthetic

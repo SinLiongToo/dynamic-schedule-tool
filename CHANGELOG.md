@@ -10,6 +10,8 @@ This file tracks changes to `index.html`. Loosely follows [Keep a Changelog](htt
 
 - 專案發布到 GitHub Pages：https://sinliongtoo.github.io/dynamic-schedule-tool/ （公開儲存庫 `SinLiongToo/dynamic-schedule-tool`）。主檔案由 `dynamic-scheduler (2).html` 更名為 `index.html`，讓網址不需要編碼空格/括號即可直接載入。
   Published the project to GitHub Pages: https://sinliongtoo.github.io/dynamic-schedule-tool/ (public repo `SinLiongToo/dynamic-schedule-tool`). Renamed the main file from `dynamic-scheduler (2).html` to `index.html` so the URL loads without needing to encode spaces/parentheses.
+- 復原／重做：右上角「↶」「↷」（或 Ctrl+Z／Ctrl+Y）可復原、重做幾乎所有會改變資料的操作——拖曳排程、表格直接編輯、自動排程、新增／複製／刪除任務或資源、匯入 JSON／CSV、修改排程視窗設定等，最多可回溯 50 步。在文字輸入框內按 Ctrl+Z 仍是瀏覽器原生的欄位復原，不會被攔截。
+  Undo/redo: "↶"/"↷" (or Ctrl+Z/Ctrl+Y) undoes and redoes almost every state-changing action — drag rescheduling, inline table edits, auto-schedule, add/duplicate/delete task or resource, JSON/CSV import, horizon/settings changes — up to 50 steps of history. Ctrl+Z inside a text field is left alone as the browser's native field-undo, not intercepted.
 
 ### 變更 / Changed
 

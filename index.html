@@ -55,6 +55,8 @@
   button.ghost{background:transparent;}
   button.danger{color:var(--red);}
   button.icon{padding:6px 8px;}
+  button:disabled{opacity:.35;cursor:not-allowed;}
+  button:disabled:hover{border-color:var(--border);}
   select,input[type=text],input[type=number],input[type=date]{
     font-family:inherit;font-size:13px;background:var(--panel);color:var(--text);
     border:1px solid var(--border);border-radius:7px;padding:6px 9px;
@@ -215,6 +217,9 @@
       <button class="icon" id="helpBtn" title="Help">❓</button>
       <button class="icon" id="langBtn" title="Language">中/EN</button>
       <button class="icon" id="themeBtn" title="Theme">🌙</button>
+      <span class="hdr-divider"></span>
+      <button class="icon" id="undoBtn" title="Undo" disabled>↶</button>
+      <button class="icon" id="redoBtn" title="Redo" disabled>↷</button>
       <span class="hdr-divider"></span>
       <select id="exportFormatSel">
         <option value="json" data-i="formatJsonOpt">JSON（完整備份）</option>
@@ -496,6 +501,7 @@ const STR = {
     sortStart:"開始時間", sortName:"名稱", noTasksMatch:"沒有符合條件的任務。",
     lockAction:"鎖定", unlockAction:"解除鎖定", duplicateAction:"複製任務", copySuffix:"複製",
     zoomOutTitle:"縮小時間軸", zoomInTitle:"放大時間軸",
+    undoTitle:"復原（Ctrl+Z）", redoTitle:"重做（Ctrl+Y）",
     expandGanttBtn:"⛶ 放大", expandGanttTitle:"全螢幕檢視甘特圖", ganttZoomTitle:"甘特圖（放大檢視）"
   },
   en:{
@@ -539,6 +545,7 @@ const STR = {
     sortStart:"Start time", sortName:"Name", noTasksMatch:"No tasks match the current filter.",
     lockAction:"Lock", unlockAction:"Unlock", duplicateAction:"Duplicate task", copySuffix:"copy",
     zoomOutTitle:"Zoom out timeline", zoomInTitle:"Zoom in timeline",
+    undoTitle:"Undo (Ctrl+Z)", redoTitle:"Redo (Ctrl+Y)",
     expandGanttBtn:"⛶ Expand", expandGanttTitle:"View Gantt chart fullscreen", ganttZoomTitle:"Gantt Chart (Expanded)"
   }
 };
@@ -591,6 +598,7 @@ const HELP = {
       · <b>排程異動比較</b>：每次按「自動排程」後，會跳出視窗列出哪些任務的時間或資源被改變（原本 → 現在），方便跟現場對照確認。<br>
       · <b>匯入／匯出（JSON 或 CSV）</b>：右上角「匯出」旁的選單可選擇格式──JSON 是完整備份（含資源、排程設定，匯入會「取代」目前所有資料，適合換電腦或還原備份）；CSV 只有任務清單（適合用 Excel 整批編輯任務）。CSV 匯入會與現有任務「同步」：任務名稱相同就更新該任務的欄位（不會變成重複任務、也不會動到它已排定的時間或鎖定狀態），名稱不同則新增為新任務；若 resource 欄位填了目前不存在的資源名稱，會自動新增該資源。deps 欄位用任務名稱、多個以「|」分隔，系統會自動比對成依賴關係。「任務／資源設定」頁可下載 CSV 範本，照著欄位格式在 Excel 整理即可。<br>
       · <b>建議流程</b>：匯入／同步任務資料 → 按「▶ 自動排程」讓系統先自動排出時程 → 視現場狀況在甘特圖上手動拖曳微調（拖放後自動鎖定，不會被下一次自動排程移動），逐步把時程調到符合實際情況。<br>
+      · <b>復原／重做</b>：右上角「↶」「↷」（或快捷鍵 Ctrl+Z／Ctrl+Y）可復原、重做幾乎所有操作——拖曳、表格直接編輯、自動排程、新增／刪除任務或資源、匯入等。最多可回溯 50 步；重新整理頁面會清空歷史紀錄。<br>
       · <b>今天標記線</b>：甘特圖上會有一條紅色直線標出現在的時間；按右上方「📍 今天」可自動捲動到那個位置（若今天不在目前排程視窗內會提示）。<br>
       · <b>相依關係箭頭</b>：勾選「顯示相依關係箭頭」，會在甘特圖上以箭頭連線標出任務之間的前置／後續關係，方便一眼看出誰在等誰。<br>
       · <b>任務清單搜尋／篩選／排序</b>：「任務／資源設定」頁的任務清單可依名稱搜尋、依狀態或資源篩選、依優先權／截止日／開始時間／名稱排序；每筆任務旁也有快速按鈕可直接鎖定/解鎖 📌、複製 ⧉、刪除 🗑，不必每次都開編輯視窗。</p>
@@ -643,6 +651,7 @@ const HELP = {
       · <b>Schedule change diff</b>: every time you click "Auto-schedule," a dialog lists which tasks moved and where (old → new), so you can quickly compare against what changed.<br>
       · <b>Import/Export (JSON or CSV)</b>: the menu next to "Export" in the top right picks the format — JSON is a full backup (resources and schedule settings included; importing it <i>replaces</i> everything currently loaded, good for moving to another computer or restoring a backup); CSV is just the task list (good for bulk-editing tasks in Excel). Importing a CSV <i>syncs</i> with existing tasks: a matching task name updates that task's fields (never a duplicate, and its current schedule/lock is left untouched), a new name adds a new task; an unrecognized resource name in the resource column creates that resource automatically. The deps column uses task names separated by "|" and gets matched into dependencies automatically. Download a CSV template from the Tasks/Resources tab to see the exact columns to fill in Excel.<br>
       · <b>Suggested workflow</b>: import/sync your task data → click "▶ Auto-schedule" to let the system lay out an initial timeline → drag bars on the Gantt chart to manually fine-tune for real-world conditions (a drop auto-pins the task so future auto-scheduling won't move it), refining the schedule step by step.<br>
+      · <b>Undo/redo</b>: "↶"/"↷" in the top right (or Ctrl+Z/Ctrl+Y) undo and redo almost any action — dragging, inline table edits, auto-schedule, adding/deleting tasks or resources, imports. Up to 50 steps of history; reloading the page clears it.<br>
       · <b>Today marker</b>: a red vertical line on the Gantt chart shows the current date/time. Click "📍 Today" in the top right to auto-scroll to it (it warns if today falls outside the current horizon).<br>
       · <b>Dependency arrows</b>: check "Show dependency arrows" to draw connector lines between tasks on the Gantt chart, so you can see at a glance which task is waiting on which.<br>
       · <b>Task list search / filter / sort</b>: on the Tasks/Resources tab, search tasks by name, filter by status or resource, and sort by priority / deadline / start time / name. Each row also has quick buttons to lock/unlock 📌, duplicate ⧉, or delete 🗑 without opening the edit dialog.</p>
@@ -672,6 +681,8 @@ function applyLanguage(){
   document.getElementById('zoomOutBtn').title = t('zoomOutTitle');
   document.getElementById('zoomInBtn').title = t('zoomInTitle');
   document.getElementById('expandGanttBtn').title = t('expandGanttTitle');
+  document.getElementById('undoBtn').title = t('undoTitle');
+  document.getElementById('redoBtn').title = t('redoTitle');
   document.getElementById('exportFormatSel').title = t('exportFormatTitle');
   document.getElementById('importBtn').title = t('importBtnTitle');
   fillHelp();
@@ -729,6 +740,37 @@ function loadState(){
   return defaultState();
 }
 function saveState(){ storage.set('dsched_state', JSON.stringify(state)); }
+
+/* ---------------- undo/redo ---------------- */
+const UNDO_LIMIT = 50;
+let undoStack = [];
+let redoStack = [];
+function pushUndo(){
+  undoStack.push(JSON.stringify(state));
+  if(undoStack.length > UNDO_LIMIT) undoStack.shift();
+  redoStack.length = 0;
+  updateUndoRedoButtons();
+}
+function undo(){
+  if(undoStack.length===0) return;
+  redoStack.push(JSON.stringify(state));
+  state = JSON.parse(undoStack.pop());
+  saveState(); render();
+  updateUndoRedoButtons();
+}
+function redo(){
+  if(redoStack.length===0) return;
+  undoStack.push(JSON.stringify(state));
+  state = JSON.parse(redoStack.pop());
+  saveState(); render();
+  updateUndoRedoButtons();
+}
+function updateUndoRedoButtons(){
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  if(undoBtn) undoBtn.disabled = undoStack.length===0;
+  if(redoBtn) redoBtn.disabled = redoStack.length===0;
+}
 
 function testerPoolState(){
   const today = new Date(); today.setHours(0,0,0,0);
@@ -892,6 +934,7 @@ function computeCriticalPath(){
 }
 
 function runAutoScheduleWithDiff(){
+  pushUndo();
   const before = new Map(state.tasks.map(t=>[t.id, {start:t.start, resource:t.resource}]));
   autoSchedule();
   const changes = [];
@@ -1082,6 +1125,7 @@ function attachBarDrag(bar, task){
     document.querySelectorAll('.daycell.over').forEach(c=>c.classList.remove('over'));
     if(!ds.moved){ openTaskModal(ds.taskId); return; }
     if(ds.hoverCell){
+      pushUndo();
       const tk = state.tasks.find(x=>x.id===ds.taskId);
       tk.resource = ds.hoverCell.dataset.resource;
       tk.start = parseInt(ds.hoverCell.dataset.slot,10);
@@ -1269,11 +1313,13 @@ function duplicateTask(id){
     deps: [...(src.deps||[])],
     locked:false, start:null, status:'pending', progress:0
   });
+  pushUndo();
   state.tasks.push(copy);
   saveState(); render();
 }
 function deleteTaskById(id){
   if(!confirm(t('confirmDelTask'))) return false;
+  pushUndo();
   state.tasks = state.tasks.filter(x=>x.id!==id);
   state.tasks.forEach(x=> x.deps = x.deps.filter(d=>d!==id));
   saveState(); render();
@@ -1333,41 +1379,41 @@ function renderTaskList(){
 
     const nameInput = document.createElement('input');
     nameInput.type='text'; nameInput.value=tk.name;
-    nameInput.addEventListener('change', e=>{ tk.name = e.target.value.trim()||'Untitled'; saveState(); render(); });
+    nameInput.addEventListener('change', e=>{ pushUndo(); tk.name = e.target.value.trim()||'Untitled'; saveState(); render(); });
 
     const durInput = document.createElement('input');
     durInput.type='number'; durInput.min=1; durInput.value=tk.duration;
-    durInput.addEventListener('change', e=>{ tk.duration = Math.max(1, parseInt(e.target.value,10)||1); saveState(); render(); });
+    durInput.addEventListener('change', e=>{ pushUndo(); tk.duration = Math.max(1, parseInt(e.target.value,10)||1); saveState(); render(); });
 
     const priInput = document.createElement('input');
     priInput.type='number'; priInput.min=1; priInput.max=5; priInput.value=tk.priority;
-    priInput.addEventListener('change', e=>{ tk.priority = Math.min(5,Math.max(1, parseInt(e.target.value,10)||3)); saveState(); render(); });
+    priInput.addEventListener('change', e=>{ pushUndo(); tk.priority = Math.min(5,Math.max(1, parseInt(e.target.value,10)||3)); saveState(); render(); });
 
     const resSel = document.createElement('select');
     resSel.innerHTML = '<option value="">'+t('kAny')+'</option>'+state.resources.map(r=>'<option value="'+r.id+'">'+r.name+'</option>').join('');
     resSel.value = tk.resource||'';
-    resSel.addEventListener('change', e=>{ tk.resource = e.target.value; saveState(); render(); });
+    resSel.addEventListener('change', e=>{ pushUndo(); tk.resource = e.target.value; saveState(); render(); });
 
     const ddlInput = document.createElement('input');
     ddlInput.type='date'; ddlInput.value=tk.deadline||'';
-    ddlInput.addEventListener('change', e=>{ tk.deadline = e.target.value; saveState(); render(); });
+    ddlInput.addEventListener('change', e=>{ pushUndo(); tk.deadline = e.target.value; saveState(); render(); });
 
     const stSel = document.createElement('select');
     ['pending','inprogress','done'].forEach(s=>{
       const o = document.createElement('option'); o.value=s; o.textContent = STR[lang][s]; stSel.appendChild(o);
     });
     stSel.value = tk.status;
-    stSel.addEventListener('change', e=>{ tk.status = e.target.value; saveState(); render(); });
+    stSel.addEventListener('change', e=>{ pushUndo(); tk.status = e.target.value; saveState(); render(); });
 
     const prgInput = document.createElement('input');
     prgInput.type='number'; prgInput.min=0; prgInput.max=100; prgInput.value=tk.progress;
-    prgInput.addEventListener('change', e=>{ tk.progress = Math.min(100,Math.max(0, parseInt(e.target.value,10)||0)); saveState(); render(); });
+    prgInput.addEventListener('change', e=>{ pushUndo(); tk.progress = Math.min(100,Math.max(0, parseInt(e.target.value,10)||0)); saveState(); render(); });
 
     const lockBtn = document.createElement('button');
     lockBtn.className='icon ghost';
     lockBtn.title = tk.locked? t('unlockAction') : t('lockAction');
     lockBtn.textContent = tk.locked? '🔓':'📌';
-    lockBtn.addEventListener('click', ()=>{ tk.locked=!tk.locked; saveState(); render(); });
+    lockBtn.addEventListener('click', ()=>{ pushUndo(); tk.locked=!tk.locked; saveState(); render(); });
 
     const actions = document.createElement('div');
     actions.className = 'et-actions';
@@ -1420,15 +1466,15 @@ function renderResList(){
 
     const nameInput = document.createElement('input');
     nameInput.type='text'; nameInput.value=r.name;
-    nameInput.addEventListener('change', e=>{ r.name = e.target.value.trim()||'Untitled'; saveState(); render(); });
+    nameInput.addEventListener('change', e=>{ pushUndo(); r.name = e.target.value.trim()||'Untitled'; saveState(); render(); });
 
     const capInput = document.createElement('input');
     capInput.type='number'; capInput.min=1; capInput.value=r.capacity;
-    capInput.addEventListener('change', e=>{ r.capacity = Math.max(1, parseInt(e.target.value,10)||1); saveState(); render(); });
+    capInput.addEventListener('change', e=>{ pushUndo(); r.capacity = Math.max(1, parseInt(e.target.value,10)||1); saveState(); render(); });
 
     const setupInput = document.createElement('input');
     setupInput.type='number'; setupInput.min=0; setupInput.value=r.setupTime||0;
-    setupInput.addEventListener('change', e=>{ r.setupTime = Math.max(0, parseInt(e.target.value,10)||0); saveState(); render(); });
+    setupInput.addEventListener('change', e=>{ pushUndo(); r.setupTime = Math.max(0, parseInt(e.target.value,10)||0); saveState(); render(); });
 
     const actions = document.createElement('div');
     actions.className = 'et-actions';
@@ -1436,6 +1482,7 @@ function renderResList(){
     delBtn.className='icon ghost danger'; delBtn.title=t('delete'); delBtn.textContent='🗑';
     delBtn.addEventListener('click', ()=>{
       if(!confirm(t('confirmDelRes'))) return;
+      pushUndo();
       state.resources = state.resources.filter(x=>x.id!==r.id);
       state.tasks.forEach(x=>{ if(x.resource===r.id) x.resource=''; });
       saveState(); render();
@@ -1521,6 +1568,7 @@ document.getElementById('saveTaskBtn').addEventListener('click', ()=>{
     progress: Math.min(100,Math.max(0, parseInt(document.getElementById('f_progress').value,10)||0)),
     locked: document.getElementById('f_locked').checked
   };
+  pushUndo();
   if(editingTaskId){
     const t = state.tasks.find(x=>x.id===editingTaskId);
     Object.assign(t, data);
@@ -1541,6 +1589,7 @@ document.getElementById('saveResBtn').addEventListener('click', ()=>{
     capacity: Math.max(1, parseInt(document.getElementById('r_capacity').value,10)||1),
     setupTime: Math.max(0, parseInt(document.getElementById('r_setup').value,10)||0)
   };
+  pushUndo();
   if(editingResId){
     Object.assign(state.resources.find(x=>x.id===editingResId), data);
   } else {
@@ -1551,6 +1600,7 @@ document.getElementById('saveResBtn').addEventListener('click', ()=>{
 document.getElementById('deleteResBtn').addEventListener('click', ()=>{
   if(!editingResId) return;
   if(!confirm(t('confirmDelRes'))) return;
+  pushUndo();
   state.resources = state.resources.filter(x=>x.id!==editingResId);
   state.tasks.forEach(x=>{ if(x.resource===editingResId) x.resource=''; });
   saveState(); closeResModal(); render();
@@ -1598,6 +1648,16 @@ document.getElementById('ganttZoomModal').addEventListener('click', (e)=>{
 
 /* ---------------- top controls ---------------- */
 document.getElementById('autoScheduleBtn').addEventListener('click', runAutoScheduleWithDiff);
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('redoBtn').addEventListener('click', redo);
+document.addEventListener('keydown', (e)=>{
+  if(!(e.ctrlKey || e.metaKey)) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if(tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT') return;
+  const key = e.key.toLowerCase();
+  if(key==='z' && !e.shiftKey){ e.preventDefault(); undo(); }
+  else if(key==='y' || (key==='z' && e.shiftKey)){ e.preventDefault(); redo(); }
+});
 document.getElementById('closeDiffBtn').addEventListener('click', ()=>{
   document.getElementById('diffModal').classList.remove('show');
 });
@@ -1654,10 +1714,12 @@ document.getElementById('themeBtn').addEventListener('click', ()=>{
   document.getElementById('themeBtn').textContent = next==='dark' ? '🌙':'☀️';
 });
 document.getElementById('resetBtn').addEventListener('click', ()=>{
+  pushUndo();
   state = defaultState();
   saveState(); render();
 });
 document.getElementById('resetTestersBtn').addEventListener('click', ()=>{
+  pushUndo();
   state = testerPoolState();
   saveState(); render();
 });
@@ -1678,7 +1740,7 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
     if(isCSV){ importTasksCSV(reader.result); return; }
     try{
       const data = JSON.parse(reader.result);
-      if(data && data.tasks && data.resources){ state = data; saveState(); render(); }
+      if(data && data.tasks && data.resources){ pushUndo(); state = data; saveState(); render(); }
       else { alert('Invalid JSON'); }
     }catch(err){ alert('Invalid JSON'); }
   };
@@ -1686,10 +1748,12 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
   e.target.value = '';
 });
 document.getElementById('horizonInput').addEventListener('change', (e)=>{
+  pushUndo();
   state.horizon = Math.min(90,Math.max(7, parseInt(e.target.value,10)||24));
   saveState(); render();
 });
 document.getElementById('skipWeekend').addEventListener('change', (e)=>{
+  pushUndo();
   state.skipWeekend = e.target.checked;
   saveState(); render();
 });
@@ -1747,6 +1811,7 @@ function exportTasksCSV(){
 function importTasksCSV(text){
   const rows = parseCSV(text);
   if(rows.length===0){ alert('Empty CSV'); return; }
+  pushUndo();
 
   const nameToId = {};
   state.tasks.forEach(tk=> nameToId[tk.name] = tk.id);
@@ -1827,6 +1892,7 @@ state = loadState();
 const savedTheme = storage.get('dsched_theme');
 if(savedTheme){ document.body.setAttribute('data-theme', savedTheme); document.getElementById('themeBtn').textContent = savedTheme==='dark'?'🌙':'☀️'; }
 updateZoomLabel();
+updateUndoRedoButtons();
 applyLanguage();
 
 })();
