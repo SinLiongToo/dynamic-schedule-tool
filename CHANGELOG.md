@@ -4,6 +4,18 @@
 
 This file tracks changes to `index.html`. Loosely follows [Keep a Changelog](https://keepachangelog.com/); dated sections instead of version numbers since this is an unversioned single-file project.
 
+## 2026-09-15
+
+### 新增 / Added
+
+- 專案發布到 GitHub Pages：https://sinliongtoo.github.io/dynamic-schedule-tool/ （公開儲存庫 `SinLiongToo/dynamic-schedule-tool`）。主檔案由 `dynamic-scheduler (2).html` 更名為 `index.html`，讓網址不需要編碼空格/括號即可直接載入。
+  Published the project to GitHub Pages: https://sinliongtoo.github.io/dynamic-schedule-tool/ (public repo `SinLiongToo/dynamic-schedule-tool`). Renamed the main file from `dynamic-scheduler (2).html` to `index.html` so the URL loads without needing to encode spaces/parentheses.
+
+### 變更 / Changed
+
+- 「範例資料」按鈕更名為「半導體晶片製程範例」，讓標籤明確反映內容本身就是晶圓廠前段製程（光罩→蝕刻→CMP→量測→爐管）；資料內容未變。同步更新「說明」(❓) 文字。
+  Renamed the "Sample data" button to "Semiconductor Fab Process Example" to make the label explicit about what it already contains — a front-end wafer fab flow (photo → etch → CMP → metrology → furnace); the underlying data is unchanged. Updated the in-app Help (❓) text to match.
+
 ## 2026-09-09
 
 ### 新增 / Added

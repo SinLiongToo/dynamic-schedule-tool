@@ -224,7 +224,7 @@
       <button id="importBtn">匯入</button>
       <input type="file" id="importFile" accept=".json,.csv,application/json,text/csv" style="display:none">
       <span class="hdr-divider"></span>
-      <button id="resetBtn" class="ghost">範例資料</button>
+      <button id="resetBtn" class="ghost">半導體晶片製程範例</button>
       <button id="resetTestersBtn" class="ghost">測試機台範例</button>
       <span class="hdr-divider"></span>
       <button class="primary" id="autoScheduleBtn">▶ 自動排程</button>
@@ -479,7 +479,7 @@ const STR = {
     exportFormatTitle:"選擇匯出格式：JSON 為完整備份（含資源、排程設定），CSV 只包含任務清單",
     importBtnTitle:"可匯入 JSON（完整備份，會取代目前資料）或 CSV（任務清單，會與現有任務同步）",
     diffTitle:"本次排程異動", diffNoChange:"沒有任務被調整位置。", diffClose:"關閉",
-    auto:"▶ 自動排程", exportL:"匯出", importL:"匯入", resetL:"範例資料", resetTestersL:"測試機台範例",
+    auto:"▶ 自動排程", exportL:"匯出", importL:"匯入", resetL:"半導體晶片製程範例", resetTestersL:"測試機台範例",
     kAny:"（自動）", confirmDelTask:"確定刪除此任務？", confirmDelRes:"確定刪除此資源？相關任務會改為未指定資源。",
     noDeadline:"—", tabs:["總覽","甘特圖","看板","資源負載","任務／資源設定"],
     atRiskTitle:"逾期風險任務", hotspotTitle:"資源熱點（負載最高）", upNextTitle:"即將開始",
@@ -522,7 +522,7 @@ const STR = {
     exportFormatTitle:"Choose the export format: JSON is a full backup (resources, schedule settings included); CSV is just the task list",
     importBtnTitle:"Accepts a JSON file (full backup, replaces current data) or a CSV file (task list, synced with existing tasks)",
     diffTitle:"Schedule changes", diffNoChange:"No tasks were moved.", diffClose:"Close",
-    auto:"▶ Auto-schedule", exportL:"Export", importL:"Import", resetL:"Sample data", resetTestersL:"Tester pool example",
+    auto:"▶ Auto-schedule", exportL:"Export", importL:"Import", resetL:"Semiconductor Fab Process Example", resetTestersL:"Tester pool example",
     kAny:"(auto)", confirmDelTask:"Delete this task?", confirmDelRes:"Delete this resource? Its tasks become unassigned.",
     noDeadline:"—", tabs:["Overview","Gantt","Kanban","Resource load","Tasks / Resources"],
     atRiskTitle:"At-risk tasks", hotspotTitle:"Resource hotspots (highest load)", upNextTitle:"Coming up",
@@ -596,7 +596,7 @@ const HELP = {
       · <b>任務清單搜尋／篩選／排序</b>：「任務／資源設定」頁的任務清單可依名稱搜尋、依狀態或資源篩選、依優先權／截止日／開始時間／名稱排序；每筆任務旁也有快速按鈕可直接鎖定/解鎖 📌、複製 ⧉、刪除 🗑，不必每次都開編輯視窗。</p>
 
       <p><b>其他</b><br>
-      右上角可切換中/英文與深/淺色主題；「匯出／匯入」支援 JSON（完整備份）與 CSV（任務清單，見上方說明）；「範例資料」「測試機台範例」可載入現成範例快速體驗。</p>
+      右上角可切換中/英文與深/淺色主題；「匯出／匯入」支援 JSON（完整備份）與 CSV（任務清單，見上方說明）；「半導體晶片製程範例」（光罩→蝕刻→CMP→量測→爐管的晶圓廠前段製程流程）與「測試機台範例」（後段測試機台共用資源池）可載入現成範例快速體驗。</p>
     `
   },
   en:{
@@ -648,7 +648,7 @@ const HELP = {
       · <b>Task list search / filter / sort</b>: on the Tasks/Resources tab, search tasks by name, filter by status or resource, and sort by priority / deadline / start time / name. Each row also has quick buttons to lock/unlock 📌, duplicate ⧉, or delete 🗑 without opening the edit dialog.</p>
 
       <p><b>Other</b><br>
-      Top right: switch language / theme. "Export"/"Import" support both JSON (full backup) and CSV (task list, see above). "Sample data" and "Tester pool example" load ready-made scenarios to try quickly.</p>
+      Top right: switch language / theme. "Export"/"Import" support both JSON (full backup) and CSV (task list, see above). "Semiconductor Fab Process Example" (a front-end wafer fab flow: photo → etch → CMP → metrology → furnace) and "Tester pool example" (a back-end test floor with a shared tester pool) load ready-made scenarios to try quickly.</p>
     `
   }
 };
