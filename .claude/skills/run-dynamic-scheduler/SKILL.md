@@ -18,8 +18,12 @@ footer. Nothing computes these automatically — there's no build step, no
 git-hash injection. Whenever you change `index.html`, bump `APP_VERSION`
 (patch for fixes/copy tweaks, minor for new features, matching what
 CHANGELOG.md's entry for the change would say) and set `APP_UPDATED` to
-the date of the change. Forgetting this means the on-page version goes
-stale relative to what's actually deployed.
+the date **and time** of the change, e.g. `'2026-09-15 07:18 (UTC+8)'`.
+Get the real current time with `date "+%Y-%m-%d %H:%M"` (Bash) — the
+environment's date/time context only gives you the date, not the time
+of day, and this field is user-visible on a public page, so don't
+guess it. Forgetting to bump either value means the on-page version
+goes stale relative to what's actually deployed.
 
 ## Running it
 
